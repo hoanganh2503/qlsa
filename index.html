@@ -1,0 +1,3897 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QLSA CSV — Quản lý Suất ăn Quân đội (bản CSV)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+<style>
+  :root {
+
+    --c-bg: #f6f7fb;
+    --c-card: #ffffff;
+    --c-text: #1a202c;
+    --c-muted: #64748b;
+    --c-border: #e5e9f0;
+    --c-border-light: #f1f3f7;
+    --c-primary: #4f46e5;
+    --c-primary-hover: #4338ca;
+    --c-primary-soft: #eef2ff;
+    --c-success: #10b981;
+    --c-success-soft: #ecfdf5;§
+    --c-warning: #f59e0b;
+    --c-warning-soft: #fffbeb;
+    --c-danger: #ef4444;
+    --c-danger-soft: #fef2f2;
+    --c-info: #0ea5e9;
+    --c-info-soft: #e0f2fe;
+    --shadow: 0 1px 3px 0 rgba(0,0,0,.05), 0 1px 2px -1px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,.06), 0 2px 4px -2px rgba(0,0,0,.04);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  *,*::before,*::after { box-sizing: border-box; }
+  html,body { margin:0; padding:0; height:100%; }
+  body {
+    background: var(--c-bg);
+    color: var(--c-text);
+    font-family: 'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app { display:flex; min-height:100vh; }
+
+  /* === SIDEBAR === */
+  .sidebar {
+    width: 260px;
+    background:#0f172a;
+    color:#cbd5e1;
+    flex-shrink:0;
+    position:sticky; top:0;
+    height:100vh;
+    display:flex; flex-direction:column;
+  }
+  .brand {
+    padding:18px 20px;
+    display:flex; align-items:center; gap:10px;
+    border-bottom:1px solid rgba(255,255,255,.07);
+  }
+  .brand .logo {
+    width:36px;height:36px;
+    background:linear-gradient(135deg,#6366f1,#8b5cf6);
+    border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:700;font-size:16px;
+  }
+  .brand .name { color:#fff; font-weight:600; font-size:15px; }
+  .brand .name small { display:block; color:#94a3b8; font-size:11px; font-weight:400; }
+
+  .nav-scroll { flex:1; overflow-y:auto; padding:10px 8px; }
+  .nav-group { margin-bottom:4px; }
+  .nav-group-head {
+    color:#64748b;
+    font-size:10.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.7px;
+    padding:14px 14px 6px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .nav-group-head::after {
+    content:'';
+    flex:1;
+    height:1px;
+    background:rgba(255,255,255,.05);
+  }
+  .nav-item {
+    display:flex; align-items:center; gap:10px;
+    color:#cbd5e1;
+    padding:7px 13px;
+    border-radius:6px;
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+    transition:all .1s;
+    text-decoration:none;
+    margin:1px 0;
+  }
+  .nav-item:hover { background:rgba(255,255,255,.05); color:#fff; }
+  .nav-item.active {
+    background:rgba(99,102,241,.15);
+    color:#fff;
+    box-shadow: inset 3px 0 0 var(--c-primary);
+  }
+  .nav-item .ico { width:16px; text-align:center; font-size:13px; opacity:.7; }
+  .nav-item .badge-tag {
+    margin-left:auto;
+    background:rgba(255,255,255,.08);
+    color:#94a3b8;
+    font-size:10px;
+    padding:1px 6px;
+    border-radius:99px;
+    font-weight:600;
+  }
+  .nav-item.auto .badge-tag { background:rgba(16,185,129,.15); color:#34d399; }
+
+  .sidebar-foot {
+    padding:12px;
+    border-top:1px solid rgba(255,255,255,.06);
+    display:flex; gap:6px;
+  }
+  .sidebar-foot button {
+    flex:1;
+    background:transparent;
+    border:1px solid rgba(255,255,255,.12);
+    color:#cbd5e1;
+    border-radius:6px;
+    padding:6px 8px;
+    font-size:11.5px;
+    cursor:pointer;
+    transition:all .1s;
+  }
+  .sidebar-foot button:hover { background:rgba(255,255,255,.06); color:#fff; }
+
+  /* === MAIN === */
+  .main { flex:1; overflow-x:auto; min-width:0; }
+  .page-head {
+    background:var(--c-card);
+    border-bottom:1px solid var(--c-border);
+    padding:18px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+  }
+  .page-head .crumb { color:var(--c-muted); font-size:12px; margin-bottom:3px; }
+  .page-head .crumb .sep { margin:0 6px; opacity:.5; }
+  .page-head h1 { font-size:19px; font-weight:600; margin:0; }
+  .page-head .subtitle { color:var(--c-muted); font-size:13px; margin-top:2px; }
+  .page-head .actions { display:flex; gap:8px; align-items:center; }
+  .page-body { padding:24px 28px 60px; }
+
+  /* === CARD === */
+  .card-x { background:var(--c-card); border:1px solid var(--c-border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; margin-bottom:20px; }
+  .card-x-head { padding:14px 20px; border-bottom:1px solid var(--c-border); display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .card-x-head h3 { font-size:14px; font-weight:600; margin:0; }
+  .card-x-head .text-muted { font-size:12px; }
+  .card-x-body { padding:18px 20px; }
+  .card-x-body.p-0 { padding:0; }
+
+  /* === STATS === */
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-bottom:20px; }
+  .stat { background:var(--c-card); border:1px solid var(--c-border); border-radius:var(--radius); padding:16px 18px; }
+  .stat .lbl { color:var(--c-muted); font-size:11.5px; font-weight:500; text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px; }
+  .stat .val { font-size:24px; font-weight:700; letter-spacing:-.5px; }
+  .stat .sfx { font-size:12px; color:var(--c-muted); margin-left:4px; font-weight:500; }
+  .stat .ico { width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:10px; }
+  .stat.s-p .ico { background:var(--c-primary-soft); color:var(--c-primary); }
+  .stat.s-s .ico { background:var(--c-success-soft); color:var(--c-success); }
+  .stat.s-w .ico { background:var(--c-warning-soft); color:var(--c-warning); }
+  .stat.s-d .ico { background:var(--c-danger-soft); color:var(--c-danger); }
+  .stat.s-i .ico { background:var(--c-info-soft); color:var(--c-info); }
+
+  /* === TABLE === */
+  .t { width:100%; border-collapse:separate; border-spacing:0; }
+  .t thead th { background:#f8fafc; color:var(--c-muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.4px; padding:10px 14px; text-align:left; border-bottom:1px solid var(--c-border); white-space:nowrap; }
+  .t tbody td { padding:11px 14px; border-bottom:1px solid var(--c-border-light); font-size:13px; vertical-align:middle; }
+  .t tbody tr:last-child td { border-bottom:none; }
+  .t tbody tr:hover td { background:#fafbfd; }
+  .t .num { text-align:right; font-variant-numeric:tabular-nums; }
+  .t tfoot td { background:#f8fafc; font-weight:600; padding:11px 14px; border-top:2px solid var(--c-border); font-size:12.5px; }
+  .t .row-action { opacity:0; transition:opacity .12s; white-space:nowrap; text-align:right; }
+  .t tr:hover .row-action { opacity:1; }
+  .t-compact tbody td { padding:7px 12px; font-size:12.5px; }
+  .t-compact thead th { padding:8px 12px; font-size:11px; }
+
+  /* === PILL === */
+  .pill { display:inline-flex; align-items:center; padding:2px 9px; border-radius:99px; font-size:11px; font-weight:600; line-height:1.5; }
+  .pill-p { background:var(--c-primary-soft); color:var(--c-primary); }
+  .pill-s { background:var(--c-success-soft); color:var(--c-success); }
+  .pill-w { background:var(--c-warning-soft); color:var(--c-warning); }
+  .pill-d { background:var(--c-danger-soft); color:var(--c-danger); }
+  .pill-i { background:var(--c-info-soft); color:var(--c-info); }
+  .pill-m { background:#f1f5f9; color:#475569; }
+  .pill-tc1 { background:#eef2ff; color:#4338ca; }
+  .pill-tc2 { background:#ecfdf5; color:#047857; }
+  .pill-tc3 { background:#fff7ed; color:#c2410c; }
+  .pill-tc4 { background:#faf5ff; color:#7c3aed; }
+
+  /* === BUTTONS === */
+  .btn-x { display:inline-flex; align-items:center; gap:6px; padding:6px 13px; border-radius:var(--radius-sm); border:1px solid var(--c-border); background:var(--c-card); color:var(--c-text); font-size:13px; font-weight:500; cursor:pointer; transition:all .1s; text-decoration:none; line-height:1.4; font-family:inherit; }
+  .btn-x:hover { background:#f8fafc; border-color:#d4d8e0; }
+  .btn-p { background:var(--c-primary); border-color:var(--c-primary); color:#fff; }
+  .btn-p:hover { background:var(--c-primary-hover); border-color:var(--c-primary-hover); color:#fff; }
+  .btn-x-sm { padding:3px 9px; font-size:11.5px; }
+  .btn-x-ghost { border-color:transparent; }
+  .btn-x-ghost:hover { background:var(--c-border-light); }
+  .btn-d { color:var(--c-danger); }
+  .btn-d:hover { background:var(--c-danger-soft); border-color:var(--c-danger-soft); }
+
+  /* === FORMS === */
+  .fx label { display:block; font-size:12px; font-weight:500; color:var(--c-muted); margin-bottom:4px; }
+  .fx input, .fx select, .fx textarea { width:100%; padding:7px 11px; border:1px solid var(--c-border); border-radius:var(--radius-sm); font-size:13px; font-family:inherit; background:var(--c-card); transition:all .1s; }
+  .fx input:focus, .fx select:focus, .fx textarea:focus { outline:none; border-color:var(--c-primary); box-shadow:0 0 0 3px rgba(79,70,229,.12); }
+  .fx-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; }
+
+  /* === SECTIONS === */
+  .section { display:none; animation:fadeIn .15s ease-out; }
+  .section.active { display:block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:none; } }
+
+  /* === CHAM COM GRID === */
+  .cham-wrap { background:var(--c-card); border:1px solid var(--c-border); border-radius:var(--radius); overflow:auto; max-height:72vh; box-shadow:var(--shadow); }
+  .cham-grid { border-collapse:separate; border-spacing:0; font-size:11px; width:100%; }
+  .cham-grid th, .cham-grid td { border-right:1px solid var(--c-border-light); border-bottom:1px solid var(--c-border-light); text-align:center; vertical-align:middle; padding:0; }
+  .cham-grid thead th { background:#f1f5f9; color:#475569; font-weight:600; padding:6px 4px; position:sticky; top:0; z-index:4; border-bottom:1px solid var(--c-border); }
+  .cham-grid .ci { background:#fafbfd; padding:6px 10px; text-align:left; }
+  .cham-grid .name-col { font-weight:500; min-width:200px; }
+  .cham-grid .name-col small { color:var(--c-muted); font-weight:400; margin-left:6px; }
+  .cham-grid .cc { width:22px; min-width:22px; height:25px; background:var(--c-card); cursor:pointer; user-select:none; color:transparent; font-weight:700; transition:all .07s; }
+  .cham-grid .cc:hover { background:#fef3c7; color:#92400e; }
+  .cham-grid .cc:hover::after { content:'x'; }
+  .cham-grid .cc.an { background:#10b981; color:#fff; }
+  .cham-grid .cc.an:hover { background:#059669; }
+  .cham-grid .cc.an::after { content:''; }
+  .cham-grid .day-sep { border-right:1px solid #cbd5e1 !important; }
+  .cham-grid .total-col { background:#fff7ed !important; font-weight:700; color:#c2410c; min-width:30px; padding:4px 6px; }
+  .cham-grid tbody tr:nth-child(even) .ci { background:#f8fafc; }
+  .cham-grid .cc.an::before { content:'x'; }
+
+  /* === FORMULA BOX === */
+  .formula { font-family:'JetBrains Mono',Menlo,monospace; font-size:11.5px; background:#0f172a; color:#e2e8f0; padding:14px 16px; border-radius:var(--radius); overflow-x:auto; }
+  .formula .cmt { color:#64748b; }
+  .formula .kw { color:#fbbf24; }
+  details.fold { margin-top:16px; }
+  details.fold summary { cursor:pointer; color:var(--c-muted); font-size:12px; font-weight:500; padding:4px 0; user-select:none; }
+  details.fold summary:hover { color:var(--c-primary); }
+
+  /* === CODE === */
+  .code { font-family:'JetBrains Mono',Menlo,monospace; font-size:11px; background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; }
+
+  /* === BANNER === */
+  .banner { padding:12px 16px; border-radius:var(--radius); display:flex; gap:12px; align-items:flex-start; margin-bottom:18px; font-size:13px; }
+  .banner-i { background:#e0f2fe; color:#075985; border:1px solid #bae6fd; }
+  .banner-w { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+  .banner-s { background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; }
+  .banner .b-ico { font-size:18px; flex-shrink:0; }
+
+  /* === MODAL === */
+  .modal-content { border:none; border-radius:var(--radius); box-shadow:0 20px 25px -5px rgba(0,0,0,.1); }
+  .modal-header { padding:16px 22px; border-bottom:1px solid var(--c-border); }
+  .modal-title { font-size:15px; font-weight:600; }
+  .modal-body { padding:20px 22px; }
+  .modal-footer { padding:13px 22px; border-top:1px solid var(--c-border); }
+
+  /* === DI CHO === */
+  .dc-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .dc-col { background:var(--c-card); border:1px solid var(--c-border); border-radius:var(--radius); padding:12px; box-shadow:var(--shadow); }
+  .dc-col-head { font-size:13px; font-weight:700; color:var(--c-primary); text-transform:uppercase; letter-spacing:.6px; padding:6px 10px 8px; border-bottom:2px solid var(--c-primary-soft); margin-bottom:10px; text-align:center; }
+  .dc-summary-tbl { width:100%; border-collapse:separate; border-spacing:0; font-size:12px; margin-bottom:6px; }
+  .dc-summary-tbl th { background:#f8fafc; padding:5px 8px; font-weight:600; color:var(--c-muted); text-align:right; font-size:10.5px; text-transform:uppercase; letter-spacing:.4px; border-bottom:1px solid var(--c-border-light); }
+  .dc-summary-tbl th:first-child { text-align:left; }
+  .dc-summary-tbl td { padding:5px 8px; border-bottom:1px solid var(--c-border-light); }
+  .dc-summary-tbl input { width:100%; padding:4px 7px; border:1px solid var(--c-border); border-radius:4px; font-size:12px; text-align:right; font-family:inherit; }
+  .dc-summary-tbl input:focus { outline:none; border-color:var(--c-primary); box-shadow:0 0 0 2px rgba(79,70,229,.12); }
+  .dc-summary-tbl .num { text-align:right; font-variant-numeric:tabular-nums; }
+  .dc-items { width:100%; border-collapse:separate; border-spacing:0; font-size:11.5px; }
+  .dc-items thead th { background:#f1f5f9; padding:6px 7px; font-weight:600; color:#475569; font-size:10.5px; text-transform:uppercase; letter-spacing:.3px; }
+  .dc-items thead th.num { text-align:right; }
+  .dc-items tbody td { padding:4px 7px; border-bottom:1px solid var(--c-border-light); }
+  .dc-items tbody td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .dc-items tfoot td { background:#f8fafc; padding:7px; font-weight:600; border-top:1px solid var(--c-border); }
+  .dc-items tfoot td.num { text-align:right; }
+  .dc-items input { width:72px; padding:3px 6px; border:1px solid var(--c-border); border-radius:4px; font-size:11.5px; text-align:right; font-family:inherit; }
+  .dc-items input:focus { outline:none; border-color:var(--c-primary); }
+  .dc-items .x-btn { color:var(--c-danger); cursor:pointer; opacity:.55; padding:0 4px; font-weight:600; }
+  .dc-items .x-btn:hover { opacity:1; }
+  .dc-items tr.dc-tc-row td { background:#fafbff; color:#475569; }
+  .dc-items .dc-sl-auto { display:inline-block; padding:3px 8px; border-radius:4px; background:var(--c-primary-soft); color:var(--c-primary); font-weight:600; font-size:11.5px; cursor:help; }
+  .dc-add-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px dashed var(--c-border); }
+  .dc-add-row select, .dc-add-row input { flex:1; padding:5px 8px; border:1px solid var(--c-border); border-radius:4px; font-size:12px; font-family:inherit; }
+  .dc-add-row input { max-width:80px; text-align:right; }
+  .dc-add-row .dc-search { flex:1 0 100%; max-width:none; text-align:left; }
+  .dc-add-row .dc-search:focus { outline:none; border-color:var(--c-primary); box-shadow:0 0 0 2px rgba(79,70,229,.12); }
+  .dc-add-row select option[hidden] { display:none; }
+  .dc-summary-card td { padding:9px 14px; font-size:13px; }
+  .dc-summary-card tr.tot td { background:#f8fafc; font-weight:700; }
+  .dc-summary-card .neg { color:var(--c-danger); }
+  .dc-summary-card .pos { color:var(--c-success); }
+  @media (max-width:1280px) { .dc-grid { grid-template-columns:1fr; } }
+
+  /* === THUC DON === */
+  .td-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
+  .td-day { background:var(--c-card); border:1px solid var(--c-border); border-radius:var(--radius); overflow:hidden; }
+  .td-day-head { background:#f8fafc; padding:8px 12px; font-weight:600; font-size:12px; border-bottom:1px solid var(--c-border); display:flex; justify-content:space-between; align-items:center; }
+  .td-bua { padding:6px 10px; border-bottom:1px solid var(--c-border-light); }
+  .td-bua:last-child { border-bottom:none; }
+  .td-bua-label { font-size:10px; color:var(--c-muted); font-weight:600; text-transform:uppercase; margin-bottom:3px; }
+  .td-mon { font-size:12px; padding:2px 0; color:var(--c-text); display:flex; justify-content:space-between; }
+  .td-mon .dl { color:var(--c-muted); font-size:11px; }
+  .td-add { font-size:11px; color:var(--c-primary); cursor:pointer; padding:2px 0; }
+  .td-add:hover { text-decoration:underline; }
+  .td-rm { opacity:0; cursor:pointer; color:var(--c-danger); font-size:11px; margin-left:4px; }
+  .td-mon:hover .td-rm { opacity:1; }
+
+  /* === SCROLL === */
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+  ::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
+
+  .text-muted { color:var(--c-muted) !important; }
+  .small { font-size:12px; }
+  .empty-state { padding:40px 20px; text-align:center; color:var(--c-muted); }
+  .empty-state .b-ico { font-size:32px; opacity:.4; margin-bottom:8px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">Q</div>
+      <div class="name">QLSA CSV <small>Lưu trữ CSV</small></div>
+    </div>
+    <div class="nav-scroll" id="nav">
+      <div class="nav-group">
+        <a class="nav-item active" data-target="dashboard"><span class="ico">⌂</span><span>Tổng quan</span></a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-head">Cấu hình</div>
+        <a class="nav-item" data-target="muc-luc"><span class="ico">⚙</span><span>Mục lục đơn vị</span></a>
+        <a class="nav-item auto" data-target="tieu-chuan"><span class="ico">★</span><span>Tiêu chuẩn ăn</span><span class="badge-tag">auto</span></a>
+        <a class="nav-item" data-target="mat-hang"><span class="ico">⊞</span><span>Mặt hàng</span></a>
+        <a class="nav-item" data-target="list-mon"><span class="ico">⌖</span><span>List món ăn</span></a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-head">Quân số &amp; Chấm cơm</div>
+        <a class="nav-item" data-target="quan-so"><span class="ico">⚐</span><span>Quân số ăn</span></a>
+        <a class="nav-item" data-target="cham-com"><span class="ico">✓</span><span>Chấm cơm</span></a>
+        <a class="nav-item auto" data-target="cham-thuc-te"><span class="ico">∑</span><span>Chấm cơm (Thực tế)</span><span class="badge-tag">auto</span></a>
+        <a class="nav-item auto" data-target="quy-doi"><span class="ico">⇄</span><span>Quy đổi 31 ngày</span><span class="badge-tag">auto</span></a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-head">Thực đơn</div>
+        <a class="nav-item" data-target="thuc-don"><span class="ico">▦</span><span>Thực đơn tuần</span><span class="badge-tag">tham khảo</span></a>
+        <a class="nav-item" data-target="di-cho"><span class="ico">⊟</span><span>Đi chợ</span></a>
+        <a class="nav-item auto" data-target="bang-ke-mh"><span class="ico">▤</span><span>Bảng kê MH</span><span class="badge-tag">auto</span></a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-head">Nhập xuất kho</div>
+        <a class="nav-item" data-target="nhap-trong-ngay"><span class="ico">⇣</span><span>Nhập trong ngày</span></a>
+        <a class="nav-item auto" data-target="phieu-nhap"><span class="ico">⇩</span><span>Phiếu nhập</span><span class="badge-tag">auto</span></a>
+        <a class="nav-item auto" data-target="phieu-xuat"><span class="ico">⇧</span><span>Phiếu xuất</span><span class="badge-tag">auto</span></a>
+        <a class="nav-item auto" data-target="ton-kho"><span class="ico">⌗</span><span>Tồn kho</span><span class="badge-tag">auto</span></a>
+        <a class="nav-item auto" data-target="so-nx"><span class="ico">▥</span><span>Sổ Nhập-Xuất</span><span class="badge-tag">auto</span></a>
+        <a class="nav-item auto" data-target="thua-thieu"><span class="ico">±</span><span>Thừa, Thiếu</span><span class="badge-tag">auto</span></a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-head">Tiền ăn</div>
+        <a class="nav-item auto" data-target="tien-an"><span class="ico">₫</span><span>Tiền ăn cá nhân</span><span class="badge-tag">auto</span></a>
+        <a class="nav-item auto" data-target="tien-khong-an"><span class="ico">⊖</span><span>Tiền không ăn</span><span class="badge-tag">auto</span></a>
+        <a class="nav-item" data-target="an-them"><span class="ico">⊕</span><span>Ăn thêm</span></a>
+        <a class="nav-item" data-target="phan-ho"><span class="ico">⌥</span><span>Phân hộ</span></a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-head">Báo cáo</div>
+        <a class="nav-item auto" data-target="tbhc"><span class="ico">▣</span><span>TBHC chi ăn 1 ngày</span><span class="badge-tag">auto</span></a>
+        <a class="nav-item auto" data-target="cong-khai"><span class="ico">▩</span><span>Công khai TC</span><span class="badge-tag">auto</span></a>
+        <a class="nav-item auto" data-target="su-dung-tp"><span class="ico">▢</span><span>Sử dụng TP-CĐ</span><span class="badge-tag">auto</span></a>
+        <a class="nav-item" data-target="bb-tinh-kho"><span class="ico">▭</span><span>BB tịnh kho</span></a>
+        <a class="nav-item" data-target="dccd"><span class="ico">▪</span><span>Tình hình DCCD</span></a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-head">Hệ thống</div>
+        <a class="nav-item" data-target="sao-luu-csv"><span class="ico">⤓</span><span>Sao lưu CSV</span><span class="badge-tag">I/O</span></a>
+      </div>
+    </div>
+    <div class="sidebar-foot">
+      <button id="btn-reset" title="Khôi phục mẫu">↻ Reset</button>
+      <button id="btn-clear" title="Xoá hết">⌫ Xoá</button>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main" id="main">
+    <!-- Sections rendered by JS -->
+  </main>
+</div>
+
+<!-- ============ MODALS ============ -->
+<div class="modal fade" id="m-nguoi" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Quân số</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body fx">
+    <input type="hidden" id="ng-id">
+    <div class="fx-row" style="margin-bottom:12px">
+      <div><label>STT</label><input type="number" id="ng-stt"></div>
+      <div style="grid-column:span 2"><label>Họ tên</label><input id="ng-ten"></div>
+    </div>
+    <div class="fx-row">
+      <div><label>Cấp bậc</label><input id="ng-cap" placeholder="2//CN, 4/...">  </div>
+      <div><label>Tiêu chuẩn</label><select id="ng-tc"></select></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:12px;cursor:pointer;color:var(--c-text)">
+      <input type="checkbox" id="ng-active" checked> <span>Đang phục vụ</span>
+    </label>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-x" data-bs-dismiss="modal">Huỷ</button>
+    <button class="btn-x btn-p" id="ng-save">Lưu</button>
+  </div>
+</div></div></div>
+
+<div class="modal fade" id="m-mh" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Mặt hàng</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body fx">
+    <input type="hidden" id="mh-id">
+    <div class="fx-row">
+      <div><label>Mã</label><input id="mh-ma"></div>
+      <div style="grid-column:span 2"><label>Tên</label><input id="mh-ten"></div>
+      <div><label>Nhóm</label><input id="mh-nhom" placeholder="LT, GV, TL..."></div>
+      <div><label>ĐVT</label><input id="mh-dvt" placeholder="Kg, Lít..."></div>
+      <div><label>Đơn giá (đ)</label><input type="number" id="mh-gia"></div>
+      <div><label>Định lượng (g/ng/ngày)</label><input type="number" step=".01" id="mh-dl"></div>
+      <div><label>Làm tròn (chữ số)</label><input type="number" id="mh-decimal" value="1"></div>
+      <div><label>Là mặt hàng tiêu chuẩn?</label>
+        <select id="mh-is-tc"><option value="0">Không</option><option value="1">Có (gạo, dầu, mắm...)</option></select></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-x" data-bs-dismiss="modal">Huỷ</button>
+    <button class="btn-x btn-p" id="mh-save">Lưu</button>
+  </div>
+</div></div></div>
+
+<div class="modal fade" id="m-mon" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Món ăn</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body fx">
+    <input type="hidden" id="mon-id">
+    <div class="fx-row" style="margin-bottom:12px">
+      <div style="grid-column:span 2"><label>Tên món</label><input id="mon-ten"></div>
+      <div><label>Nhóm</label><select id="mon-nhom"></select></div>
+    </div>
+    <div class="fx-row" style="margin-bottom:12px">
+      <div><label>ĐL Sáng (g/người)</label><input type="number" id="mon-s"></div>
+      <div><label>ĐL Trưa (g/người)</label><input type="number" id="mon-t"></div>
+      <div><label>ĐL Tối (g/người)</label><input type="number" id="mon-c"></div>
+    </div>
+    <div><label>Mặt hàng đại diện (để xuất kho)</label><select id="mon-mh"></select></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-x" data-bs-dismiss="modal">Huỷ</button>
+    <button class="btn-x btn-p" id="mon-save">Lưu</button>
+  </div>
+</div></div></div>
+
+<div class="modal fade" id="m-tdmon" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Thêm món vào thực đơn</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body fx">
+    <input type="hidden" id="tdm-ngay"><input type="hidden" id="tdm-bua">
+    <div style="margin-bottom:12px"><label>Bữa</label><div id="tdm-bua-display" class="small text-muted"></div></div>
+    <div><label>Chọn món</label><select id="tdm-mon"></select></div>
+    <div style="margin-top:12px"><label>Định lượng /người (g) — có thể chỉnh, mặc định lấy từ List món</label>
+      <input type="number" id="tdm-dl"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-x" data-bs-dismiss="modal">Huỷ</button>
+    <button class="btn-x btn-p" id="tdm-save">Thêm</button>
+  </div>
+</div></div></div>
+
+<div class="modal fade" id="m-ntn" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Giao dịch nhập trong ngày</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body fx">
+    <input type="hidden" id="ntn-id">
+    <div class="fx-row">
+      <div><label>Ngày</label><input type="date" id="ntn-ngay"></div>
+      <div><label>Mã phiếu</label><input id="ntn-phieu" placeholder="N01, N02..."></div>
+      <div style="grid-column:span 2"><label>Mặt hàng</label><select id="ntn-mh"></select></div>
+      <div><label>Số lượng</label><input type="number" step=".001" id="ntn-sl"></div>
+      <div><label>Đơn giá (đ)</label><input type="number" id="ntn-gia"></div>
+      <div><label>Thành tiền (auto)</label><input type="number" id="ntn-tt" readonly></div>
+      <div style="grid-column:span 3"><label>Ghi chú</label><input id="ntn-gc"></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-x" data-bs-dismiss="modal">Huỷ</button>
+    <button class="btn-x btn-p" id="ntn-save">Lưu</button>
+  </div>
+</div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+'use strict';
+
+// ============================================================
+// ROUNDING — chống lỗi float JS
+// Dùng exponential string trick: 0.14*67 = 9.379999... nhưng +"9.379999e1" = 93.79999...
+// ta cleanse trước qua toPrecision(15) để loại noise nhỏ
+// ============================================================
+function roundExcel(value, decimals = 0) {
+  if (value === 0 || !isFinite(value)) return value || 0;
+  const sign = value < 0 ? -1 : 1;
+  const abs = Math.abs(value);
+  // Cleanse noise: 0.14*67 = 9.379999999999999 -> toPrecision(15) = "9.38000000000000"
+  const cleansed = +abs.toPrecision(15);
+  // Shift bằng string để tránh float multiply error
+  const shifted = +(cleansed.toString() + 'e' + decimals);
+  const rounded = Math.round(shifted);  // JS Math.round rounds half toward +∞
+  // Shift ngược
+  return sign * +(rounded.toString() + 'e' + (-decimals));
+}
+function roundToUnit(value, unit) {
+  if (unit <= 0) throw new Error('unit phải > 0');
+  return roundExcel(value / unit, 0) * unit;
+}
+function roundMoney(v) { return roundExcel(v, 0); }
+function roundThousand(v) { return roundToUnit(v, 1000); }
+
+// ============================================================
+// DATA STORAGE
+// ============================================================
+const STORE_KEY = 'qlsa_csv_v1';
+
+// Định lượng tiêu chuẩn cố định (Tiêu chuẩn!D5:S14 trong Excel)
+// Mỗi mặt hàng có định lượng cho TC1, TC2, TC3, TC4 × 3 bữa (S/T/C)
+// Đơn vị g hoặc kg tùy mặt hàng
+const TC_DINH_LUONG = {
+  // Đơn vị tự nhiên (kg/lít) -- giữ nguyên như Tiêu chuẩn Excel
+  // [TC1_S, TC1_T, TC1_C, TC2_S, TC2_T, TC2_C, TC3_S, TC3_T, TC3_C, TC4_S, TC4_T, TC4_C]
+  // Decimal places để làm tròn khi xuất kho
+  'GAO':   { dl: [0.136, 0.272, 0.272, 0.18, 0.25, 0.25, 0.18, 0.25, 0.25, 0.18, 0.25, 0.25], dec: 1 },
+  'MAM':   { dl: [0.006, 0.012, 0.012, 0.006, 0.012, 0.012, 0.006, 0.012, 0.012, 0.006, 0.012, 0.012], dec: 1 },
+  'MUOI':  { dl: [0.004, 0.008, 0.008, 0.006, 0.012, 0.012, 0.006, 0.012, 0.012, 0.006, 0.012, 0.012], dec: 1 },
+  'MICH':  { dl: [0.0004, 0.0008, 0.0008, 0.0004, 0.0008, 0.0008, 0.0004, 0.0008, 0.0008, 0.0004, 0.0008, 0.0008], dec: 2 },
+  'DAU':   { dl: [0.005, 0.010, 0.010, 0.005, 0.010, 0.010, 0.005, 0.010, 0.010, 0.005, 0.010, 0.010], dec: 1 },
+  'VLAC':  { dl: [0.002, 0.004, 0.004, 0.002, 0.004, 0.004, 0.002, 0.004, 0.004, 0.002, 0.004, 0.004], dec: 1 },
+  'GAS':   { dl: [0.01, 0.02, 0.02, 0.0116, 0.0232, 0.0232, 0.0116, 0.0232, 0.0232, 0.0116, 0.0232, 0.0232], dec: 1 },
+};
+
+// Định lượng tiêu chuẩn theo ngày (Tiêu chuẩn!B18:O34 trong Excel)
+// 17 mặt hàng + nhiệt lượng — đây là CHỐT định lượng/người/ngày, dùng cho cả 4 TC
+// Các mặt hàng có chia bữa S/T/C nằm ở TC_DINH_LUONG ở trên (auto xuất kho)
+// Các mặt hàng còn lại (thịt, cá, trứng, rau, hoa quả) phụ thuộc Thực đơn
+const TC_DINH_LUONG_NGAY = [
+  { stt: 1,  ten: 'Gạo',              dvt: 'g/người/ngày', dl: 680, ma: 'GAO',   mhMa:'GAO',   nhom: 'auto',  note: 'Lương thực chính, chia bữa 2:4:4' },
+  { stt: 2,  ten: 'Thịt xô lọc',      dvt: 'g/người/ngày', dl: 50,  ma: 'TL',    mhMa:'TLON',  nhom: 'menu',  note: 'Quy thịt lợn: ba chỉ, thăn, nạc, giò…' },
+  { stt: 3,  ten: 'Thịt lợn nạc',     dvt: 'g/người/ngày', dl: 80,  ma: 'TL',    mhMa:'TLON',  nhom: 'menu',  note: 'Quy thịt lợn nạc' },
+  { stt: 4,  ten: 'Thịt bò, trâu',    dvt: 'g/người/ngày', dl: 40,  ma: 'TB',    mhMa:'TBO',   nhom: 'menu',  note: 'Quy bò: trâu, bò, dê…' },
+  { stt: 5,  ten: 'Thịt gia cầm',     dvt: 'g/người/ngày', dl: 90,  ma: 'GC',    mhMa:'GA',    nhom: 'menu',  note: 'Quy gia cầm: ngan, vịt, gà, ngỗng' },
+  { stt: 6,  ten: 'Dầu, mỡ ăn',       dvt: 'g/người/ngày', dl: 25,  ma: 'DAU',   mhMa:'DAU',   nhom: 'auto',  note: 'Tự xuất theo TC' },
+  { stt: 7,  ten: 'Cá tươi',          dvt: 'g/người/ngày', dl: 150, ma: 'CÁ',    mhMa:'CA',    nhom: 'menu',  note: 'Quy cá tươi: tôm, cua, cá…' },
+  { stt: 8,  ten: 'Trứng',            dvt: 'g/người/ngày', dl: 40,  ma: 'TR',    mhMa:'TRUNG', nhom: 'menu',  note: '≈ 1 quả trứng gà/vịt' },
+  { stt: 9,  ten: 'Đậu phụ',          dvt: 'g/người/ngày', dl: 80,  ma: 'ĐẬU',   mhMa:'DAUF',  nhom: 'menu',  note: '≈ 1 cái đậu rán/nhồi/trắng' },
+  { stt: 10, ten: 'Vừng, lạc',        dvt: 'g/người/ngày', dl: 10,  ma: 'VLAC',  mhMa:'VLAC',  nhom: 'auto',  note: 'Tự xuất theo TC' },
+  { stt: 11, ten: 'Nước mắm',         dvt: 'g/người/ngày', dl: 30,  ma: 'MAM',   mhMa:'MAM',   nhom: 'auto',  note: 'Tự xuất theo TC' },
+  { stt: 12, ten: 'Muối I-ốt',        dvt: 'g/người/ngày', dl: 20,  ma: 'MUOI',  mhMa:'MUOI',  nhom: 'auto',  note: 'TC1 = 20g, TC2/3/4 = 30g' },
+  { stt: 13, ten: 'Mì chính',         dvt: 'g/người/ngày', dl: 2,   ma: 'MICH',  mhMa:'MICH',  nhom: 'auto',  note: '⚠ làm tròn 2 chữ số (0.0004 kg)' },
+  { stt: 14, ten: 'Rau xanh',         dvt: 'g/người/ngày', dl: 400, ma: 'RAU',   mhMa:'RAU',   nhom: 'menu',  note: 'Quy rau củ các loại' },
+  { stt: 15, ten: 'Hoa quả tươi',     dvt: 'g/người/ngày', dl: 300, ma: 'HQ',    mhMa:'HQ',    nhom: 'menu',  note: 'Hoa quả tráng miệng' },
+  { stt: 16, ten: 'Gia vị',           dvt: '% tiền ăn',    dl: 3,   ma: 'GVI',   mhMa:'GVI',   nhom: 'pct',   note: '3% tiền ăn bữa, tròn nghìn' },
+  { stt: 17, ten: 'Chất đốt',         dvt: 'g/người/ngày', dl: 800, ma: 'GAS',   mhMa:'GAS',   nhom: 'auto',  note: 'Quy chất đốt (gas, dầu, củi)' },
+];
+
+const TC_NHIET_LUONG = 3200; // Kcal/người/ngày — chuẩn 4 TC
+
+// Bảng Tiêu chuẩn (Excel sheet "Tiêu chuẩn" rows 4..14) — 11 dòng, 16 ô cells/row
+// cells = [TC1_S, TC1_T, TC1_C, TC1_Tong,  TC2_S, T, C, Tong,  TC3_S, T, C, Tong,  TC4_S, T, C, Tong]
+// null = ô trống (Excel để rỗng). Người dùng vẫn sửa được.
+const TC_BANG_DEFAULT = [
+  { stt:1,  ten:'Tiền ăn',     dvt:'Đồng', mhMa:null,    gia:null,   cells:[14400,28800,28800,72000,  19600,39200,39200,98000,  23400,46800,46800,117000,  0,0,0,0] },
+  { stt:2,  ten:'Gạo',         dvt:'Kg',   mhMa:'GAO',   gia:13140,  cells:[0.136,0.272,0.272,0.68,   0.18,0.25,0.25,0.68,      0.18,0.25,0.25,0.68,        0.18,0.25,0.25,0.68] },
+  { stt:3,  ten:'Chất đốt',    dvt:'%',    mhMa:'GAS',   gia:27800,  cells:[0.05,0.05,0.05,0.05,      0.01,0.02,0.02,0.058,     0.0116,0.0232,0.0232,0.058, 0.0116,0.0232,0.0232,0.058] },
+  { stt:4,  ten:'Mắm',         dvt:'Lít',  mhMa:'MAM',   gia:22000,  cells:[0.006,0.012,0.012,0.03,   0.006,0.012,0.012,0.03,   0.006,0.012,0.012,0.03,     0.006,0.012,0.012,0.03] },
+  { stt:5,  ten:'Muối',        dvt:'Kg',   mhMa:'MUOI',  gia:5000,   cells:[0.004,0.008,0.008,0.02,   0.006,0.012,0.012,0.03,   0.006,0.012,0.012,0.03,     0.006,0.012,0.012,0.03] },
+  { stt:6,  ten:'Mì chính',    dvt:'Kg',   mhMa:'MICH',  gia:55000,  cells:[0.0004,0.0008,0.0008,0.002, 0.0004,0.0008,0.0008,0.002, 0.0004,0.0008,0.0008,0.002, 0.0004,0.0008,0.0008,0.002] },
+  { stt:7,  ten:'Dầu ăn',      dvt:'Lít',  mhMa:'DAU',   gia:50000,  cells:[0.005,0.01,0.01,0.025,    0.005,0.01,0.01,0.02,     10,0.01,0.01,0.02,           0.005,0.01,0.01,0.02] },
+  { stt:8,  ten:'Gia vị',      dvt:'%',    mhMa:'GVI',   gia:null,   cells:[0.006,0.012,0.012,0.03,   null,null,null,3,         null,null,null,3,            null,null,null,3] },
+  { stt:9,  ten:'Dầu rửa bát', dvt:'%',    mhMa:'DRB',   gia:null,   cells:[0.0007,0.0014,0.0014,0.0035, null,null,null,null,    null,null,null,null,         null,null,null,null] },
+  { stt:10, ten:'Lạc, vừng',   dvt:'Kg',   mhMa:'VLAC',  gia:60000,  cells:[0.002,0.004,0.004,0.01,   null,null,null,null,      null,null,null,null,         null,null,null,null] },
+  { stt:11, ten:'Nhiệt lượng', dvt:'Kcal', mhMa:null,    gia:null,   cells:[null,null,null,3200,      null,null,null,3200,      null,null,null,3200,         null,null,null,3200] },
+];
+
+const DEFAULT_DATA = () => ({
+  cauHinh: {
+    donVi: 'Tiểu Đoàn phương tiện không người lái',
+    donViInHoa: 'TIỂU ĐOÀN PHƯƠNG TIỆN KHÔNG NGƯỜI LÁI',
+    chiHuy: '4/ Trần Văn Hoan',
+    quanLy: '2/CN Đỗ Thế Anh',
+    tiepPham: '1//CN Nguyễn Xuân Thu',
+    thuKho: '2/CN Phùng Công Chung',
+    quanY: '1//CN Vũ Hoài Đức',
+    quanSo: 124,
+    tienAnThem: 72000,
+    thuChuan: 1425000,
+    kyHienTai: { thang: new Date().getMonth()+1, nam: new Date().getFullYear() },
+    chuyenThangTruoc: 0,
+    giaSangCK: 10000, giaTruaCK: 20000, giaChieuCK: 20000,
+  },
+  tieuChuan: [
+    { id:1, ma:'TC1', ten:'Mức tiêu chuẩn 1', tienSang:14400, tienTrua:28800, tienChieu:28800 },
+    { id:2, ma:'TC2', ten:'Mức tiêu chuẩn 2', tienSang:19600, tienTrua:39200, tienChieu:39200 },
+    { id:3, ma:'TC3', ten:'Mức tiêu chuẩn 3', tienSang:23400, tienTrua:46800, tienChieu:46800 },
+    { id:4, ma:'TC4', ten:'Mức tiêu chuẩn 4', tienSang:0, tienTrua:0, tienChieu:0 },
+  ],
+  dinhLuongChuan: TC_DINH_LUONG_NGAY.map(x => ({ ...x })),
+  nhietLuongChuan: TC_NHIET_LUONG,
+  matHang: [
+    // FIXED items - dùng định lượng tiêu chuẩn TC_DINH_LUONG
+    { id:1, ma:'GAO',   ten:'Gạo tẻ',         nhom:'LT', dvt:'Kg',  gia:13140, isTC:true, decimal:1 },
+    { id:2, ma:'GAS',   ten:'Gas',            nhom:'CD', dvt:'Kg',  gia:27800, isTC:true, decimal:1 },
+    { id:3, ma:'MAM',   ten:'Nước mắm',       nhom:'GV', dvt:'Lít', gia:22000, isTC:true, decimal:1 },
+    { id:4, ma:'MUOI',  ten:'Muối I-ốt',      nhom:'GV', dvt:'Kg',  gia:5000,  isTC:true, decimal:1 },
+    { id:5, ma:'MICH',  ten:'Mì chính',       nhom:'GV', dvt:'Kg',  gia:55000, isTC:true, decimal:2 },
+    { id:6, ma:'DAU',   ten:'Dầu ăn',         nhom:'GV', dvt:'Lít', gia:50000, isTC:true, decimal:1 },
+    { id:7, ma:'VLAC',  ten:'Vừng, lạc',      nhom:'GV', dvt:'Kg',  gia:60000, isTC:true, decimal:1 },
+    // Mặt hàng tính theo % tiền ăn bữa (chất đốt dầu diezen, dầu rửa bát, gia vị tổng hợp)
+    { id:8, ma:'DDIEZ', ten:'Dầu diezen',     nhom:'CD', dvt:'%',   gia:0,     isTC:true, decimal:2 },
+    { id:9, ma:'DRB',   ten:'Dầu rửa bát',    nhom:'GV', dvt:'%',   gia:0,     isTC:true, decimal:2 },
+    { id:18,ma:'GVI',   ten:'Gia vị',         nhom:'GV', dvt:'%',   gia:0,     isTC:true, decimal:2 },
+    // Variable items - phụ thuộc thực đơn
+    { id:10, ma:'TLON',  ten:'Thịt lợn xô lọc', nhom:'TL', dvt:'Kg', gia:104500, isTC:false, decimal:2 },
+    { id:11, ma:'TBO',   ten:'Thịt bò, trâu',   nhom:'TB', dvt:'Kg', gia:235000, isTC:false, decimal:2 },
+    { id:12, ma:'GA',    ten:'Gà CN làm sẵn',   nhom:'GA', dvt:'Kg', gia:60000,  isTC:false, decimal:2 },
+    { id:13, ma:'CA',    ten:'Cá trôi',         nhom:'CA', dvt:'Kg', gia:32000,  isTC:false, decimal:2 },
+    { id:14, ma:'TRUNG', ten:'Trứng vịt',       nhom:'TR', dvt:'Quả', gia:2700,  isTC:false, decimal:0 },
+    { id:15, ma:'DAUF',  ten:'Đậu phụ',         nhom:'DA', dvt:'Cái', gia:2500,  isTC:false, decimal:0 },
+    { id:16, ma:'RAU',   ten:'Rau xanh (chung)', nhom:'RA', dvt:'Kg', gia:7000,  isTC:false, decimal:2 },
+    { id:17, ma:'HQ',    ten:'Hoa quả tươi',    nhom:'HQ', dvt:'Kg', gia:15000,  isTC:false, decimal:2 },
+  ],
+  monAn: [
+    { id:1,  ten:'Cơm tẻ',                nhom:'CO', dlS:150, dlT:265, dlC:265, mhId:1 },
+    { id:2,  ten:'Thịt lợn kho',          nhom:'TL', dlS:65,  dlT:78,  dlC:78,  mhId:10 },
+    { id:3,  ten:'Thịt rang hành',        nhom:'TL', dlS:65,  dlT:78,  dlC:78,  mhId:10 },
+    { id:4,  ten:'Thịt sốt cà chua',      nhom:'TL', dlS:65,  dlT:78,  dlC:78,  mhId:10 },
+    { id:5,  ten:'Gà rang gừng',          nhom:'GA', dlS:0,   dlT:90,  dlC:90,  mhId:12 },
+    { id:6,  ten:'Bò xào cần tây',        nhom:'TB', dlS:0,   dlT:40,  dlC:40,  mhId:11 },
+    { id:7,  ten:'Cá rán',                nhom:'CA', dlS:0,   dlT:100, dlC:100, mhId:13 },
+    { id:8,  ten:'Cá kho riềng',          nhom:'CA', dlS:0,   dlT:100, dlC:100, mhId:13 },
+    { id:9,  ten:'Trứng cuộn',            nhom:'TR', dlS:0,   dlT:40,  dlC:40,  mhId:14 },
+    { id:10, ten:'Trứng ốp',              nhom:'TR', dlS:40,  dlT:0,   dlC:0,   mhId:14 },
+    { id:11, ten:'Đậu rán',               nhom:'DA', dlS:0,   dlT:80,  dlC:80,  mhId:15 },
+    { id:12, ten:'Rau muống xào tỏi',     nhom:'RX', dlS:0,   dlT:100, dlC:100, mhId:16 },
+    { id:13, ten:'Rau cải luộc',          nhom:'RL', dlS:120, dlT:140, dlC:140, mhId:16 },
+    { id:14, ten:'Canh nước rau luộc',    nhom:'CN', dlS:0,   dlT:0,   dlC:0,   mhId:16 },
+    { id:15, ten:'Canh ngao mùng tơi',    nhom:'CN', dlS:80,  dlT:80,  dlC:80,  mhId:16 },
+    { id:16, ten:'Chuối tiêu',            nhom:'HQ', dlS:0,   dlT:100, dlC:100, mhId:17 },
+    { id:17, ten:'Dưa hấu',               nhom:'HQ', dlS:0,   dlT:120, dlC:120, mhId:17 },
+  ],
+  nguoiAn: [
+    { id:1,  stt:1,  hoTen:'Nguyễn Xuân Giang',     capBac:'2//',     tcId:1, active:true },
+    { id:2,  stt:2,  hoTen:'Nguyễn Văn Giỏi',       capBac:'1//',     tcId:1, active:true },
+    { id:3,  stt:3,  hoTen:'Trần Văn Hoan',         capBac:'4/',      tcId:1, active:true },
+    { id:4,  stt:4,  hoTen:'Trương Công Tuấn',      capBac:'4/',      tcId:1, active:true },
+    { id:5,  stt:5,  hoTen:'Phạm Văn Tuyến',        capBac:'1//CN',   tcId:1, active:true },
+    { id:6,  stt:6,  hoTen:'Mai Nguyên Quốc Công',  capBac:'2//CN',   tcId:1, active:true },
+    { id:7,  stt:7,  hoTen:'Chu Đức Thuyến',        capBac:'2//CN',   tcId:1, active:true },
+    { id:8,  stt:8,  hoTen:'Trần Đức Thành',        capBac:'1//CN',   tcId:1, active:true },
+    { id:9,  stt:9,  hoTen:'Lương Xuân Việt',       capBac:'1//CN',   tcId:1, active:true },
+    { id:10, stt:10, hoTen:'Nguyễn Văn Huy',        capBac:'1//CN',   tcId:1, active:true },
+    { id:11, stt:11, hoTen:'Phạm Văn Long',         capBac:'1/CN',    tcId:2, active:true },
+    { id:12, stt:12, hoTen:'Nguyễn Trung Kiên',     capBac:'H2',      tcId:2, active:true },
+    { id:13, stt:13, hoTen:'Đỗ Thế Anh',            capBac:'2/CN',    tcId:2, active:true },
+  ],
+  chamCom: {},  // key = `${nguoiId}_${ngay}_${bua}`
+  thucDon: {},  // key = "YYYY-MM-DD" → { S: [{monId, dl}], T: [...], C: [...] }
+  diCho: {},    // key = "YYYY-MM-DD" → { S/T/C: { qs, anThem, items:[{mhId,sl}] } }
+  nhapTrongNgay: [],  // [{ id, ngay, maPhieu, mhId, soLuong, donGia, thanhTien, ghiChu }]
+  phanHo: [
+    { nguoiId:1, kh1:true, kh2:false, kh3:true, kh4:false },
+    { nguoiId:2, kh1:true, kh2:true,  kh3:false, kh4:true },
+    { nguoiId:3, kh1:false, kh2:true, kh3:true, kh4:true },
+    { nguoiId:4, kh1:true, kh2:true,  kh3:true, kh4:true },
+  ],
+  anThem: [],
+  bule: 400, donVi_phanho: 1000,
+  kh1Tien: 200000, kh2Tien: 350000, kh3Tien: 150000, kh4Tien: 80000,
+});
+
+let DATA;
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return DEFAULT_DATA();
+    return JSON.parse(raw);
+  } catch (e) { return DEFAULT_DATA(); }
+}
+function saveData() { localStorage.setItem(STORE_KEY, JSON.stringify(DATA)); }
+function nextId(list) { return list.length ? Math.max(...list.map(x => +x.id || 0)) + 1 : 1; }
+DATA = loadData();
+// Migrate older snapshots (thiếu mặt hàng % hoặc diCho)
+if (!DATA.diCho) DATA.diCho = {};
+['DDIEZ','DRB','GVI'].forEach(ma => {
+  if (DATA.matHang.some(m => m.ma === ma)) return;
+  const seed = { DDIEZ:{id:8,ten:'Dầu diezen',nhom:'CD'}, DRB:{id:9,ten:'Dầu rửa bát',nhom:'GV'}, GVI:{id:18,ten:'Gia vị',nhom:'GV'} }[ma];
+  DATA.matHang.push({ id:seed.id, ma, ten:seed.ten, nhom:seed.nhom, dvt:'%', gia:0, isTC:true, decimal:2 });
+});
+// Dọn entries DC* cũ trong nhapTrongNgay — nay đọc live từ Đi chợ, không cần lưu trùng
+if (DATA.nhapTrongNgay && DATA.nhapTrongNgay.length) {
+  DATA.nhapTrongNgay = DATA.nhapTrongNgay.filter(g => !(g.maPhieu && /^DC/.test(g.maPhieu)));
+}
+// Seed Định lượng tiêu chuẩn theo ngày vào DATA (snapshot cũ chưa có hoặc thiếu mhMa)
+if (!Array.isArray(DATA.dinhLuongChuan) || !DATA.dinhLuongChuan.length || !DATA.dinhLuongChuan[0].mhMa) {
+  DATA.dinhLuongChuan = TC_DINH_LUONG_NGAY.map(x => ({ ...x }));
+}
+if (!DATA.nhietLuongChuan) DATA.nhietLuongChuan = TC_NHIET_LUONG;
+// Seed Định lượng theo BỮA (TC1 S/T/C…) vào DATA — để Tiêu chuẩn ăn sửa được, Đi chợ tự lấy
+if (!DATA.dinhLuongBua) {
+  DATA.dinhLuongBua = {};
+  Object.keys(TC_DINH_LUONG).forEach(ma => {
+    DATA.dinhLuongBua[ma] = { dl: [...TC_DINH_LUONG[ma].dl], dec: TC_DINH_LUONG[ma].dec };
+  });
+}
+// Seed % mặc định cho Dầu diezen / Dầu rửa bát / Gia vị
+if (!DATA.pctMuc) DATA.pctMuc = { DDIEZ:5, DRB:1, GVI:3 };
+// Seed bảng Tiêu chuẩn (11 dòng × 16 ô) — y Excel
+if (!Array.isArray(DATA.tcBang) || !DATA.tcBang.length) {
+  DATA.tcBang = JSON.parse(JSON.stringify(TC_BANG_DEFAULT));
+}
+// Seed thêm quân số mock cho đủ 124 để test (chỉ pad, không xoá ai)
+if (DATA.cauHinh.quanSo < 124) DATA.cauHinh.quanSo = 124;
+while (DATA.nguoiAn.length < 124) {
+  const stt = DATA.nguoiAn.length + 1;
+  DATA.nguoiAn.push({
+    id: nextId(DATA.nguoiAn),
+    stt,
+    hoTen: `Chiến sĩ ${String(stt).padStart(3,'0')}`,
+    capBac: '1//',
+    tcId: 1,
+    active: true,
+  });
+}
+saveData();
+
+// ============================================================
+// HELPERS
+// ============================================================
+const NHOM_MON = [
+  {code:'CO',ten:'Cơm'},{code:'TL',ten:'Thịt lợn'},{code:'GA',ten:'Thịt gà'},
+  {code:'TB',ten:'Thịt bò trâu'},{code:'CA',ten:'Cá'},{code:'TR',ten:'Trứng'},
+  {code:'DA',ten:'Đậu'},{code:'RX',ten:'Rau xào'},{code:'RL',ten:'Rau luộc'},
+  {code:'CN',ten:'Canh'},{code:'HQ',ten:'Hoa quả'},
+];
+const NHOM_MH = {LT:'Lương thực',CD:'Chất đốt',GV:'Gia vị',TL:'Thịt lợn',TB:'Thịt bò',GA:'Gia cầm',CA:'Cá',TR:'Trứng',DA:'Đậu',RA:'Rau',HQ:'Hoa quả',TUOI:'Tươi (đi chợ)'};
+const BUAS = [{code:'S',ten:'Sáng'},{code:'T',ten:'Trưa'},{code:'C',ten:'Chiều'}];
+
+const fmt = n => (n == null || isNaN(n)) ? '0' : Number(n).toLocaleString('vi-VN');
+const fmtN = (n,d=1) => (n == null || isNaN(n)) ? '0' : Number(n).toLocaleString('vi-VN', { minimumFractionDigits:d, maximumFractionDigits:d });
+const fmtD = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+const ymdToDmy = ymd => { if (!ymd) return ''; const [y,m,d] = ymd.split('-'); return `${d}/${m}/${y}`; };
+const getTC = id => DATA.tieuChuan.find(x => x.id === id);
+const getMH = id => DATA.matHang.find(x => x.id === id);
+const getMon = id => DATA.monAn.find(x => x.id === id);
+const tcPill = ma => 'pill pill-' + (ma||'').toLowerCase();
+const dim = (thang, nam) => new Date(nam, thang, 0).getDate();
+const dayKey = (y, m, d) => `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+// Đếm số bữa của 1 người theo bữa
+function demSoBua(nguoiId, bua) {
+  let c = 0;
+  for (const k in DATA.chamCom) {
+    const [n,_,b] = k.split('_');
+    if (+n === nguoiId && b === bua) c++;
+  }
+  return c;
+}
+// Đếm số người ăn 1 ngày 1 bữa, theo TC
+function demNguoiAnTheoNgayBua(ngay, bua, tcId = null) {
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  let c = 0;
+  DATA.nguoiAn.filter(n => n.active && (tcId == null || n.tcId === tcId)).forEach(n => {
+    if (DATA.chamCom[`${n.id}_${ngay}_${bua}`]) c++;
+  });
+  return c;
+}
+// Tổng QS theo bữa cả tháng cho 1 TC
+function tongQsThang(tcId, bua) {
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  const ngayMax = dim(thang, nam);
+  let s = 0;
+  for (let d = 1; d <= ngayMax; d++) s += demNguoiAnTheoNgayBua(d, bua, tcId);
+  return s;
+}
+
+// ============================================================
+// XUẤT KHO: tính lượng xuất 1 mặt hàng / 1 ngày
+// Áp công thức Tồn kho!D4:
+//   = Σ SUMPRODUCT(ROUND(TC_dl_S/T/C × QS_S/T/C, n))  cho mỗi TC
+// Plus: nguyên liệu từ thực đơn × QS bữa đó
+// ============================================================
+function xuatKhoNgay(mhId, ngay) {
+  const mh = getMH(mhId);
+  if (!mh) return 0;
+  // ĐVT % chỉ là khoản chi tài chính, không có xuất kho vật lý
+  if (mh.dvt === '%') return 0;
+  const dec = mh.decimal ?? 1;
+  let xuat = 0;
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  const dkey = dayKey(nam, thang, ngay);
+
+  if (mh.isTC) {
+    // Mặt hàng tiêu chuẩn kg/L — Excel: SUMPRODUCT(ROUND(dl_TC × QS_TC, n))
+    // QS theo TC×bữa lấy từ chấm cơm (chuẩn Excel)
+    const tcDL = TC_DINH_LUONG[mh.ma];
+    if (tcDL) {
+      DATA.tieuChuan.forEach((tc, tcIdx) => {
+        const baseIdx = tcIdx * 3;
+        ['S','T','C'].forEach((b, bIdx) => {
+          const dl = tcDL.dl[baseIdx + bIdx] || 0;
+          const qs = demNguoiAnTheoNgayBua(ngay, b, tc.id);
+          xuat += roundExcel(dl * qs, dec); // ROUND BÊN TRONG (theo công thức Excel)
+        });
+      });
+    }
+  } else {
+    // Mặt hàng tươi (thịt/cá/rau/trứng/đậu/giò...): xuất = Σ SL Đi chợ 3 bữa
+    const day = (DATA.diCho || {})[dkey];
+    if (day) {
+      ['S','T','C'].forEach(b => {
+        const qsBua = +day[b].qs || 0;
+        (day[b].items || []).forEach(it => {
+          if (it.mhId !== mhId) return;
+          xuat += dichoItemSL(it, qsBua, b);
+        });
+      });
+    }
+  }
+
+  // Cộng thêm từ thực đơn (giữ tương thích thực đơn cũ — nếu có)
+  const td = DATA.thucDon[dkey];
+  if (td) {
+    ['S','T','C'].forEach(b => {
+      const items = td[b] || [];
+      const qsBua = demNguoiAnTheoNgayBua(ngay, b);
+      items.forEach(it => {
+        const mon = getMon(it.monId);
+        if (!mon || mon.mhId !== mhId) return;
+        const dlGram = (it.dl != null) ? it.dl : (b==='S'?mon.dlS:b==='T'?mon.dlT:mon.dlC);
+        let sl;
+        if (mh.dvt === 'Quả') sl = Math.ceil(dlGram * qsBua / 60);
+        else if (mh.dvt === 'Cái') sl = Math.ceil(dlGram * qsBua / 80);
+        else sl = dlGram * qsBua / 1000;
+        xuat += roundExcel(sl, dec);
+      });
+    });
+  }
+  return xuat;
+}
+
+// Tổng nhập của 1 mặt hàng / 1 ngày
+//   = Σ SL Đi chợ 3 bữa (auto, không cần import tay)
+//   + Σ SL nhập tay (DATA.nhapTrongNgay, loại bỏ mã DC để tránh trùng nếu có data cũ)
+function nhapKhoNgay(mhId, ngay) {
+  const mh = getMH(mhId);
+  if (!mh || mh.dvt === '%') return 0;
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  const dkey = dayKey(nam, thang, ngay);
+  let nh = 0;
+  // 1) Từ Đi chợ (live, đọc trực tiếp)
+  const day = (DATA.diCho || {})[dkey];
+  if (day) {
+    ['S','T','C'].forEach(b => {
+      const qsBua = +day[b].qs || 0;
+      (day[b].items || []).forEach(it => {
+        if (it.mhId !== mhId) return;
+        nh += dichoItemSL(it, qsBua, b);
+      });
+    });
+  }
+  // 2) Nhập tay từ nguồn khác (không phải auto từ Đi chợ)
+  DATA.nhapTrongNgay.forEach(g => {
+    if (g.mhId !== mhId || g.ngay !== dkey) return;
+    if (g.maPhieu && g.maPhieu.startsWith('DC')) return; // bỏ entries import cũ
+    nh += +g.soLuong || 0;
+  });
+  return nh;
+}
+
+// Tồn kho cuối ngày = tồn đầu + nhập - xuất
+// Tồn đầu ngày 1 = 0 (hoặc chuyển tháng trước, demo set 0)
+function tonKhoNgay(mhId, ngay) {
+  let ton = 0; // tồn đầu tháng (mặc định 0)
+  for (let d = 1; d <= ngay; d++) {
+    const nh = nhapKhoNgay(mhId, d);
+    const xt = xuatKhoNgay(mhId, d);
+    ton = ton + nh - xt;
+  }
+  return ton;
+}
+
+// ============================================================
+// CSV IMPORT / EXPORT — lưu/đọc dữ liệu CSV (UTF-8 BOM, Excel-friendly)
+// ============================================================
+// Format: dùng dấu phẩy ","; chuỗi chứa ",|"|\n thì bọc bằng "..." và "" escape ".
+//         File có BOM ﻿ để Excel mở đúng tiếng Việt.
+
+function csvEscape(v) {
+  if (v == null) return '';
+  let s = String(v);
+  if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0 || s.indexOf('\r') >= 0) {
+    s = '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function csvStringify(rows) {
+  // rows: mảng object (key đầu = header)
+  if (!rows || !rows.length) return '﻿';
+  const headers = Object.keys(rows[0]);
+  const lines = [headers.map(csvEscape).join(',')];
+  rows.forEach(r => {
+    lines.push(headers.map(h => csvEscape(r[h])).join(','));
+  });
+  return '﻿' + lines.join('\n');
+}
+
+function csvParse(text) {
+  // Bỏ BOM
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = [];
+  let cur = [], field = '', inQ = false, i = 0;
+  while (i < text.length) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i+1] === '"') { field += '"'; i += 2; continue; }
+        inQ = false; i++; continue;
+      }
+      field += c; i++; continue;
+    }
+    if (c === '"') { inQ = true; i++; continue; }
+    if (c === ',') { cur.push(field); field = ''; i++; continue; }
+    if (c === '\r') { i++; continue; }
+    if (c === '\n') { cur.push(field); rows.push(cur); cur = []; field = ''; i++; continue; }
+    field += c; i++;
+  }
+  if (field !== '' || cur.length) { cur.push(field); rows.push(cur); }
+  if (!rows.length) return [];
+  const headers = rows.shift();
+  return rows.filter(r => r.length && !(r.length === 1 && r[0] === '')).map(r => {
+    const o = {};
+    headers.forEach((h, idx) => { o[h] = r[idx] != null ? r[idx] : ''; });
+    return o;
+  });
+}
+
+function downloadCsv(filename, rows) {
+  const blob = new Blob([csvStringify(rows)], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+
+function readCsvFile(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => { try { resolve(csvParse(String(r.result))); } catch (e) { reject(e); } };
+    r.onerror = reject;
+    r.readAsText(file, 'utf-8');
+  });
+}
+
+// Cast theo schema (number/bool) cho dữ liệu CSV vừa parse
+function castRows(rows, schema) {
+  return rows.map(r => {
+    const o = {};
+    for (const k of Object.keys(schema)) {
+      const t = schema[k];
+      const v = r[k];
+      if (t === 'int')      o[k] = v === '' || v == null ? 0 : parseInt(v, 10) || 0;
+      else if (t === 'num') o[k] = v === '' || v == null ? 0 : parseFloat(v) || 0;
+      else if (t === 'bool')o[k] = (v === '1' || v === 'true' || v === 'TRUE' || v === 'True' || v === 'x' || v === '✓');
+      else                  o[k] = v == null ? '' : v;
+    }
+    return o;
+  });
+}
+
+// Đăng ký tất cả bảng CSV — mỗi bảng có:
+//   file: tên file, fields: thứ tự cột, schema: kiểu cast, get/set: cách lấy/ghi vào DATA
+const CSV_TABLES = {
+  cau_hinh: {
+    label: 'Cấu hình đơn vị',
+    file: 'cau_hinh.csv',
+    fields: ['key','value'],
+    get: () => Object.keys(DATA.cauHinh).map(k => ({
+      key: k,
+      value: typeof DATA.cauHinh[k] === 'object' ? JSON.stringify(DATA.cauHinh[k]) : DATA.cauHinh[k]
+    })),
+    set: (rows) => {
+      const obj = {};
+      rows.forEach(r => {
+        let v = r.value;
+        if (typeof v === 'string' && (v.startsWith('{') || v.startsWith('['))) {
+          try { v = JSON.parse(v); } catch {}
+        } else if (typeof v === 'string' && v !== '' && !isNaN(+v)) {
+          v = +v;
+        }
+        obj[r.key] = v;
+      });
+      DATA.cauHinh = Object.assign({}, DATA.cauHinh, obj);
+    }
+  },
+  tieu_chuan: {
+    label: 'Tiêu chuẩn ăn (4 TC)',
+    file: 'tieu_chuan.csv',
+    fields: ['id','ma','ten','tienSang','tienTrua','tienChieu'],
+    schema: { id:'int', ma:'str', ten:'str', tienSang:'num', tienTrua:'num', tienChieu:'num' },
+    get: () => DATA.tieuChuan.map(r => pickFields(r, ['id','ma','ten','tienSang','tienTrua','tienChieu'])),
+    set: (rows) => { DATA.tieuChuan = castRows(rows, CSV_TABLES.tieu_chuan.schema); }
+  },
+  dinh_luong_chuan: {
+    label: 'Định lượng tiêu chuẩn 17 mặt hàng',
+    file: 'dinh_luong_chuan.csv',
+    fields: ['stt','ten','dvt','dl','ma','mhMa','nhom','note'],
+    schema: { stt:'int', ten:'str', dvt:'str', dl:'num', ma:'str', mhMa:'str', nhom:'str', note:'str' },
+    get: () => (DATA.dinhLuongChuan || []).map(r => pickFields(r, ['stt','ten','dvt','dl','ma','mhMa','nhom','note'])),
+    set: (rows) => { DATA.dinhLuongChuan = castRows(rows, CSV_TABLES.dinh_luong_chuan.schema); }
+  },
+  tc_bang: {
+    label: 'Bảng Tiêu chuẩn (11 dòng × 4 TC × S/T/C/Tổng + Giá)',
+    file: 'tc_bang.csv',
+    fields: ['stt','ten','dvt','mhMa','tc1_s','tc1_t','tc1_c','tc1_tong','tc2_s','tc2_t','tc2_c','tc2_tong','tc3_s','tc3_t','tc3_c','tc3_tong','tc4_s','tc4_t','tc4_c','tc4_tong','gia'],
+    get: () => (DATA.tcBang || []).map(r => ({
+      stt: r.stt, ten: r.ten, dvt: r.dvt, mhMa: r.mhMa || '',
+      tc1_s: r.cells[0] ?? '', tc1_t: r.cells[1] ?? '', tc1_c: r.cells[2] ?? '', tc1_tong: r.cells[3] ?? '',
+      tc2_s: r.cells[4] ?? '', tc2_t: r.cells[5] ?? '', tc2_c: r.cells[6] ?? '', tc2_tong: r.cells[7] ?? '',
+      tc3_s: r.cells[8] ?? '', tc3_t: r.cells[9] ?? '', tc3_c: r.cells[10] ?? '', tc3_tong: r.cells[11] ?? '',
+      tc4_s: r.cells[12] ?? '', tc4_t: r.cells[13] ?? '', tc4_c: r.cells[14] ?? '', tc4_tong: r.cells[15] ?? '',
+      gia: r.gia ?? '',
+    })),
+    set: (rows) => {
+      const cellKeys = ['tc1_s','tc1_t','tc1_c','tc1_tong','tc2_s','tc2_t','tc2_c','tc2_tong','tc3_s','tc3_t','tc3_c','tc3_tong','tc4_s','tc4_t','tc4_c','tc4_tong'];
+      DATA.tcBang = rows.map(r => ({
+        stt: parseInt(r.stt, 10) || 0,
+        ten: r.ten || '',
+        dvt: r.dvt || '',
+        mhMa: r.mhMa || null,
+        cells: cellKeys.map(k => r[k] === '' || r[k] == null ? null : parseFloat(r[k])),
+        gia: r.gia === '' || r.gia == null ? null : parseFloat(r.gia),
+      }));
+      _syncTcBangDownstream();
+    }
+  },
+  mat_hang: {
+    label: 'Mặt hàng',
+    file: 'mat_hang.csv',
+    fields: ['id','ma','ten','nhom','dvt','gia','isTC','decimal'],
+    schema: { id:'int', ma:'str', ten:'str', nhom:'str', dvt:'str', gia:'num', isTC:'bool', decimal:'int' },
+    get: () => DATA.matHang.map(r => pickFields(r, ['id','ma','ten','nhom','dvt','gia','isTC','decimal'])),
+    set: (rows) => { DATA.matHang = castRows(rows, CSV_TABLES.mat_hang.schema); }
+  },
+  mon_an: {
+    label: 'Món ăn',
+    file: 'mon_an.csv',
+    fields: ['id','ten','nhom','dlS','dlT','dlC','mhId'],
+    schema: { id:'int', ten:'str', nhom:'str', dlS:'num', dlT:'num', dlC:'num', mhId:'int' },
+    get: () => DATA.monAn.map(r => pickFields(r, ['id','ten','nhom','dlS','dlT','dlC','mhId'])),
+    set: (rows) => { DATA.monAn = castRows(rows, CSV_TABLES.mon_an.schema); }
+  },
+  nguoi_an: {
+    label: 'Người ăn (quân số)',
+    file: 'nguoi_an.csv',
+    fields: ['id','stt','hoTen','capBac','tcId','active'],
+    schema: { id:'int', stt:'int', hoTen:'str', capBac:'str', tcId:'int', active:'bool' },
+    get: () => DATA.nguoiAn.map(r => pickFields(r, ['id','stt','hoTen','capBac','tcId','active'])),
+    set: (rows) => { DATA.nguoiAn = castRows(rows, CSV_TABLES.nguoi_an.schema); }
+  },
+  cham_com: {
+    label: 'Chấm cơm (key = nguoiId_ngay_bua)',
+    file: 'cham_com.csv',
+    fields: ['key','value'],
+    get: () => Object.keys(DATA.chamCom).map(k => ({ key: k, value: DATA.chamCom[k] ? '1' : '0' })),
+    set: (rows) => {
+      DATA.chamCom = {};
+      rows.forEach(r => { if (r.key) DATA.chamCom[r.key] = (r.value === '1' || r.value === 'true'); });
+    }
+  },
+  thuc_don: {
+    label: 'Thực đơn (mỗi món 1 dòng)',
+    file: 'thuc_don.csv',
+    fields: ['ngay','bua','monId','dl'],
+    schema: { ngay:'str', bua:'str', monId:'int', dl:'num' },
+    get: () => {
+      const out = [];
+      Object.keys(DATA.thucDon).forEach(ngay => {
+        const td = DATA.thucDon[ngay];
+        ['S','T','C'].forEach(b => {
+          (td[b] || []).forEach(it => out.push({ ngay, bua: b, monId: it.monId, dl: it.dl ?? '' }));
+        });
+      });
+      return out;
+    },
+    set: (rows) => {
+      const td = {};
+      castRows(rows, CSV_TABLES.thuc_don.schema).forEach(r => {
+        if (!td[r.ngay]) td[r.ngay] = { S:[], T:[], C:[] };
+        if (!td[r.ngay][r.bua]) td[r.ngay][r.bua] = [];
+        const item = { monId: r.monId };
+        if (r.dl) item.dl = r.dl;
+        td[r.ngay][r.bua].push(item);
+      });
+      DATA.thucDon = td;
+    }
+  },
+  di_cho: {
+    label: 'Đi chợ (mỗi item 1 dòng)',
+    file: 'di_cho.csv',
+    fields: ['ngay','bua','qs','anThem','mhId','sl','dl'],
+    schema: { ngay:'str', bua:'str', qs:'int', anThem:'int', mhId:'int', sl:'num', dl:'num' },
+    get: () => {
+      const out = [];
+      Object.keys(DATA.diCho || {}).forEach(ngay => {
+        const day = DATA.diCho[ngay];
+        ['S','T','C'].forEach(b => {
+          const bu = day[b] || {};
+          const items = bu.items || [];
+          if (!items.length) {
+            out.push({ ngay, bua: b, qs: bu.qs || 0, anThem: bu.anThem || 0, mhId: '', sl: '', dl: '' });
+          } else {
+            items.forEach(it => out.push({
+              ngay, bua: b, qs: bu.qs || 0, anThem: bu.anThem || 0,
+              mhId: it.mhId, sl: it.sl ?? '', dl: it.dl ?? ''
+            }));
+          }
+        });
+      });
+      return out;
+    },
+    set: (rows) => {
+      const dc = {};
+      castRows(rows, CSV_TABLES.di_cho.schema).forEach(r => {
+        if (!dc[r.ngay]) dc[r.ngay] = { S:{qs:0,anThem:0,items:[]}, T:{qs:0,anThem:0,items:[]}, C:{qs:0,anThem:0,items:[]} };
+        const bu = dc[r.ngay][r.bua];
+        bu.qs = r.qs; bu.anThem = r.anThem;
+        if (r.mhId) {
+          const it = { mhId: r.mhId };
+          if (r.sl) it.sl = r.sl;
+          if (r.dl) it.dl = r.dl;
+          bu.items.push(it);
+        }
+      });
+      DATA.diCho = dc;
+    }
+  },
+  nhap_trong_ngay: {
+    label: 'Nhập trong ngày (giao dịch tiếp phẩm)',
+    file: 'nhap_trong_ngay.csv',
+    fields: ['id','ngay','maPhieu','mhId','soLuong','donGia','thanhTien','ghiChu'],
+    schema: { id:'int', ngay:'str', maPhieu:'str', mhId:'int', soLuong:'num', donGia:'num', thanhTien:'num', ghiChu:'str' },
+    get: () => DATA.nhapTrongNgay.map(r => pickFields(r, ['id','ngay','maPhieu','mhId','soLuong','donGia','thanhTien','ghiChu'])),
+    set: (rows) => { DATA.nhapTrongNgay = castRows(rows, CSV_TABLES.nhap_trong_ngay.schema); }
+  },
+  phan_ho: {
+    label: 'Phân hộ (cấp khoản theo người)',
+    file: 'phan_ho.csv',
+    fields: ['nguoiId','kh1','kh2','kh3','kh4'],
+    schema: { nguoiId:'int', kh1:'bool', kh2:'bool', kh3:'bool', kh4:'bool' },
+    get: () => (DATA.phanHo || []).map(r => pickFields(r, ['nguoiId','kh1','kh2','kh3','kh4'])),
+    set: (rows) => { DATA.phanHo = castRows(rows, CSV_TABLES.phan_ho.schema); }
+  },
+  an_them: {
+    label: 'Ăn thêm (thường xuyên)',
+    file: 'an_them.csv',
+    fields: ['id','ngay','bua','nguoiId','soLuong','ghiChu'],
+    schema: { id:'int', ngay:'str', bua:'str', nguoiId:'int', soLuong:'num', ghiChu:'str' },
+    get: () => (DATA.anThem || []).map(r => pickFields(r, ['id','ngay','bua','nguoiId','soLuong','ghiChu'])),
+    set: (rows) => { DATA.anThem = castRows(rows, CSV_TABLES.an_them.schema); }
+  },
+  khoan_tien: {
+    label: 'Tiền khoản & bù lẻ',
+    file: 'khoan_tien.csv',
+    fields: ['key','value'],
+    get: () => [
+      { key:'bule', value: DATA.bule },
+      { key:'donVi_phanho', value: DATA.donVi_phanho },
+      { key:'kh1Tien', value: DATA.kh1Tien },
+      { key:'kh2Tien', value: DATA.kh2Tien },
+      { key:'kh3Tien', value: DATA.kh3Tien },
+      { key:'kh4Tien', value: DATA.kh4Tien },
+    ],
+    set: (rows) => {
+      rows.forEach(r => {
+        const v = +r.value || 0;
+        if (r.key in { bule:1, donVi_phanho:1, kh1Tien:1, kh2Tien:1, kh3Tien:1, kh4Tien:1 }) {
+          DATA[r.key] = v;
+        }
+      });
+    }
+  },
+};
+
+function pickFields(obj, fields) {
+  const o = {};
+  fields.forEach(f => { o[f] = obj && obj[f] != null ? obj[f] : ''; });
+  return o;
+}
+
+// Export 1 bảng
+function exportTableCsv(name) {
+  const def = CSV_TABLES[name];
+  if (!def) return;
+  const rows = def.get();
+  if (!rows.length) {
+    // Vẫn cho download file chỉ có header
+    const headers = def.fields || Object.keys(rows[0] || {});
+    const blob = new Blob(['﻿' + headers.join(',') + '\n'], { type:'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = def.file;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+    return;
+  }
+  downloadCsv(def.file, rows);
+}
+
+// Export TẤT CẢ thành nhiều file (download tuần tự) + 1 file manifest
+function exportAllCsv() {
+  Object.keys(CSV_TABLES).forEach((name, idx) => {
+    setTimeout(() => exportTableCsv(name), idx * 250);
+  });
+  // Manifest
+  setTimeout(() => {
+    const manifest = {
+      app: 'QLSA CSV',
+      exportedAt: new Date().toISOString(),
+      tables: Object.keys(CSV_TABLES).map(n => ({
+        name: n, file: CSV_TABLES[n].file, label: CSV_TABLES[n].label,
+        rows: CSV_TABLES[n].get().length
+      }))
+    };
+    const blob = new Blob([JSON.stringify(manifest, null, 2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'manifest.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+  }, Object.keys(CSV_TABLES).length * 250);
+}
+
+// Import 1 bảng
+async function importTableCsv(name, file) {
+  const def = CSV_TABLES[name];
+  if (!def) throw new Error('Không có bảng ' + name);
+  const rows = await readCsvFile(file);
+  def.set(rows);
+  saveData();
+  return rows.length;
+}
+
+// Export toàn bộ DATA dưới dạng JSON 1 file (backup nhanh)
+function exportAllJson() {
+  const blob = new Blob([JSON.stringify(DATA, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  a.href = url; a.download = `qlsa_backup_${stamp}.json`;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+
+async function importAllJson(file) {
+  const r = new FileReader();
+  return new Promise((resolve, reject) => {
+    r.onload = () => {
+      try {
+        const obj = JSON.parse(String(r.result));
+        DATA = obj; saveData(); resolve();
+      } catch (e) { reject(e); }
+    };
+    r.onerror = reject;
+    r.readAsText(file, 'utf-8');
+  });
+}
+
+// ============================================================
+// RENDER: trang "Sao lưu CSV"
+// ============================================================
+function renderSaoLuuCsv() {
+  setSubtitle('Xuất / nhập dữ liệu dưới dạng CSV — mở được trong Excel, có thể chỉnh tay.');
+  const rows = Object.keys(CSV_TABLES).map(name => {
+    const def = CSV_TABLES[name];
+    const count = def.get().length;
+    return `<tr>
+      <td><strong>${def.label}</strong><div class="muted" style="font-size:11px">${def.file}</div></td>
+      <td class="num">${count}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary" onclick="exportTableCsv('${name}')">↓ Xuất</button>
+        <label class="btn btn-sm btn-outline-secondary" style="margin-bottom:0;cursor:pointer">
+          ↑ Nhập
+          <input type="file" accept=".csv" style="display:none" onchange="onImportCsv(event,'${name}')">
+        </label>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('page-body').innerHTML = `
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-body">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-primary" onclick="exportAllCsv()">⇩ Xuất TẤT CẢ CSV (nhiều file)</button>
+          <button class="btn btn-outline-primary" onclick="exportAllJson()">⇩ Sao lưu JSON 1 file</button>
+          <label class="btn btn-outline-secondary" style="margin-bottom:0;cursor:pointer">
+            ⇧ Khôi phục JSON
+            <input type="file" accept=".json" style="display:none" onchange="onImportJson(event)">
+          </label>
+          <div class="muted" style="margin-left:auto;font-size:12px">
+            Khoá lưu trữ: <code>${STORE_KEY}</code>
+          </div>
+        </div>
+        <p class="muted" style="font-size:12px;margin:10px 0 0">
+          Trình duyệt KHÔNG được phép ghi thẳng vào ổ cứng — mỗi CSV sẽ được tải về thư mục Downloads.
+          Khi cần khôi phục, dùng nút "Nhập" tương ứng để chọn file đã tải về.
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <table class="t">
+          <thead><tr><th>Bảng</th><th class="num">Số dòng</th><th style="width:220px">Thao tác</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="card-body">
+        <h6 style="margin:0 0 8px">Ghi chú quan trọng</h6>
+        <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7">
+          <li>File CSV có BOM UTF-8 → mở thẳng bằng Excel hiển thị đúng tiếng Việt có dấu.</li>
+          <li>Khi nhập CSV: dữ liệu cũ của bảng đó sẽ bị <strong>thay thế</strong> hoàn toàn.</li>
+          <li>Mỗi bảng độc lập — có thể nhập <em>mặt hàng</em> mà không ảnh hưởng <em>người ăn</em>.</li>
+          <li>Nên xuất TẤT CẢ trước khi sửa, để có bản sao lưu hoàn chỉnh.</li>
+          <li>Khoá ID phải duy nhất; nếu sửa <code>mhId</code> trong CSV này thì phải sửa cả CSV khác tham chiếu tới nó.</li>
+        </ul>
+      </div>
+    </div>`;
+}
+
+async function onImportCsv(ev, name) {
+  const f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  if (!confirm(`Nhập "${CSV_TABLES[name].label}" — sẽ XOÁ dữ liệu cũ của bảng này. Tiếp tục?`)) {
+    ev.target.value = ''; return;
+  }
+  try {
+    const n = await importTableCsv(name, f);
+    alert(`Đã nhập ${n} dòng vào "${CSV_TABLES[name].label}".`);
+    showSection('sao-luu-csv');
+  } catch (e) {
+    alert('Lỗi nhập CSV: ' + (e.message || e));
+  }
+  ev.target.value = '';
+}
+
+async function onImportJson(ev) {
+  const f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  if (!confirm('Khôi phục từ JSON — sẽ XOÁ toàn bộ dữ liệu hiện tại. Tiếp tục?')) {
+    ev.target.value = ''; return;
+  }
+  try {
+    await importAllJson(f);
+    alert('Khôi phục thành công.');
+    showSection('dashboard');
+  } catch (e) {
+    alert('Lỗi khôi phục JSON: ' + (e.message || e));
+  }
+  ev.target.value = '';
+}
+
+// ============================================================
+// NAVIGATION & ROUTING
+// ============================================================
+const SECTIONS = {
+  'dashboard':       { title:'Tổng quan',                renderer:renderDashboard,    group:'' },
+  'muc-luc':         { title:'Mục lục đơn vị',           renderer:renderMucLuc,       group:'Cấu hình' },
+  'tieu-chuan':      { title:'Tiêu chuẩn ăn',            renderer:renderTieuChuan,    group:'Cấu hình' },
+  'mat-hang':        { title:'Mặt hàng',                 renderer:renderMatHang,      group:'Cấu hình' },
+  'list-mon':        { title:'List món ăn',              renderer:renderListMon,      group:'Cấu hình' },
+  'quan-so':         { title:'Quân số ăn',               renderer:renderQuanSo,       group:'Quân số' },
+  'cham-com':        { title:'Chấm cơm',                 renderer:renderChamCom,      group:'Quân số' },
+  'cham-thuc-te':    { title:'Chấm cơm (Thực tế)',       renderer:renderChamThucTe,   group:'Quân số' },
+  'quy-doi':         { title:'Quy đổi 31 ngày',          renderer:renderQuyDoi,       group:'Quân số' },
+  'thuc-don':        { title:'Thực đơn tuần',            renderer:renderThucDon,      group:'Thực đơn' },
+  'di-cho':          { title:'Đi chợ',                   renderer:renderDiCho,        group:'Thực đơn' },
+  'bang-ke-mh':      { title:'Bảng kê mua hàng',         renderer:renderBangKe,       group:'Thực đơn' },
+  'nhap-trong-ngay': { title:'Nhập trong ngày',          renderer:renderNhapTrongNgay,group:'Kho' },
+  'phieu-nhap':      { title:'Phiếu nhập',               renderer:renderPhieuNhap,    group:'Kho' },
+  'phieu-xuat':      { title:'Phiếu xuất',               renderer:renderPhieuXuat,    group:'Kho' },
+  'ton-kho':         { title:'Tồn kho',                  renderer:renderTonKho,       group:'Kho' },
+  'so-nx':           { title:'Sổ Nhập-Xuất',             renderer:renderSoNX,         group:'Kho' },
+  'thua-thieu':      { title:'Thừa, Thiếu',              renderer:renderThuaThieu,    group:'Kho' },
+  'tien-an':         { title:'Tiền ăn cá nhân',          renderer:renderTienAn,       group:'Tiền ăn' },
+  'tien-khong-an':   { title:'Tiền không ăn',            renderer:renderTienKoAn,     group:'Tiền ăn' },
+  'an-them':         { title:'Ăn thêm',                  renderer:renderAnThem,       group:'Tiền ăn' },
+  'phan-ho':         { title:'Phân hộ',                  renderer:renderPhanHo,       group:'Tiền ăn' },
+  'tbhc':            { title:'TBHC chi ăn 1 ngày',       renderer:renderTBHC,         group:'Báo cáo' },
+  'cong-khai':       { title:'Công khai TC',             renderer:renderCongKhai,     group:'Báo cáo' },
+  'su-dung-tp':      { title:'Sử dụng TP-CĐ',            renderer:renderSuDungTP,     group:'Báo cáo' },
+  'bb-tinh-kho':     { title:'Biên bản tịnh kho',        renderer:renderBBTinhKho,    group:'Báo cáo' },
+  'dccd':            { title:'Tình hình DCCD',           renderer:renderDCCD,         group:'Báo cáo' },
+  'sao-luu-csv':     { title:'Sao lưu CSV',                renderer:renderSaoLuuCsv,    group:'Hệ thống' },
+};
+
+function showSection(name) {
+  document.querySelectorAll('#nav .nav-item').forEach(x => x.classList.toggle('active', x.dataset.target === name));
+  const sec = SECTIONS[name];
+  if (!sec) return;
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="page-head">
+      <div>
+        ${sec.group ? `<div class="crumb">${sec.group}<span class="sep">›</span>${sec.title}</div>` : ''}
+        <h1>${sec.title}</h1>
+        <div class="subtitle" id="page-subtitle"></div>
+      </div>
+      <div class="actions" id="page-actions"></div>
+    </div>
+    <div class="page-body" id="page-body"></div>
+  `;
+  sec.renderer();
+  window.scrollTo(0, 0);
+}
+document.getElementById('nav').addEventListener('click', e => {
+  const a = e.target.closest('.nav-item');
+  if (!a) return;
+  e.preventDefault();
+  showSection(a.dataset.target);
+});
+
+function setSubtitle(t) { const el = document.getElementById('page-subtitle'); if (el) el.textContent = t; }
+function setActions(html) { const el = document.getElementById('page-actions'); if (el) el.innerHTML = html; }
+
+// ============================================================
+// SECTION: DASHBOARD
+// ============================================================
+function renderDashboard() {
+  setSubtitle('Demo HTML chạy trong trình duyệt — dữ liệu lưu localStorage. Mọi công thức làm tròn được port nguyên từ Excel.');
+  const body = document.getElementById('page-body');
+  body.innerHTML = `
+    <div class="stats">
+      <div class="stat s-p"><div class="ico">⚐</div>
+        <div class="lbl">Quân số phục vụ</div><div class="val">${DATA.nguoiAn.filter(n=>n.active).length}<span class="sfx">người</span></div></div>
+      <div class="stat s-s"><div class="ico">★</div>
+        <div class="lbl">Mức tiêu chuẩn</div><div class="val">${DATA.tieuChuan.length}<span class="sfx">TC</span></div></div>
+      <div class="stat s-w"><div class="ico">⊞</div>
+        <div class="lbl">Mặt hàng cấu hình</div><div class="val">${DATA.matHang.length}<span class="sfx">loại</span></div></div>
+      <div class="stat s-i"><div class="ico">▦</div>
+        <div class="lbl">Món ăn</div><div class="val">${DATA.monAn.length}<span class="sfx">món</span></div></div>
+      <div class="stat s-d"><div class="ico">✓</div>
+        <div class="lbl">Bữa đã chấm</div><div class="val">${Object.keys(DATA.chamCom).length}<span class="sfx">bữa</span></div></div>
+    </div>
+    <div class="card-x">
+      <div class="card-x-head">
+        <div><h3>Kiểm thử công thức làm tròn &amp; tồn kho</h3>
+        <div class="text-muted small">So sánh kết quả JavaScript với giá trị Excel gốc</div></div>
+        <span id="test-summary" class="pill pill-m">Đang chạy...</span>
+      </div>
+      <div class="card-x-body p-0">
+        <table class="t"><thead><tr>
+          <th>Test case</th><th>Công thức</th><th class="num">Kỳ vọng</th><th class="num">Kết quả</th><th>Status</th>
+        </tr></thead><tbody id="test-results"></tbody></table>
+      </div>
+    </div>
+  `;
+
+  const tests = [
+    // === Rounding cơ bản ===
+    { name:'TBHC gạo sáng',       f:'ROUND(0.14*67, 1)',          x:9.4,    c:() => roundExcel(0.14*67, 1) },
+    { name:'TBHC gạo trưa',       f:'ROUND(0.29*61, 1)',          x:17.7,   c:() => roundExcel(0.29*61, 1) },
+    { name:'TBHC gạo chiều',      f:'ROUND(0.29*61, 1)',          x:17.7,   c:() => roundExcel(0.29*61, 1) },
+    { name:'TBHC mì chính',       f:'ROUND(0.0004*67, 2)',        x:0.03,   c:() => roundExcel(0.0004*67, 2) },
+    { name:'TBHC dầu trưa',       f:'ROUND(0.01*61, 1)',          x:0.6,    c:() => roundExcel(0.01*61, 1) },
+    { name:'TBHC điện',           f:'ROUND(67*0.2, 0)',           x:13,     c:() => roundExcel(67*0.2, 0) },
+    { name:'Half-up .5',          f:'ROUND(0.5, 0)',              x:1,      c:() => roundExcel(0.5, 0) },
+    { name:'Half-up 2.5',         f:'ROUND(2.5, 0)',              x:3,      c:() => roundExcel(2.5, 0) },
+    { name:'Half-up -2.5',        f:'ROUND(-2.5, 0)',             x:-3,     c:() => roundExcel(-2.5, 0) },
+    { name:'1.005 → 1.01',        f:'ROUND(1.005, 2)',            x:1.01,   c:() => roundExcel(1.005, 2) },
+    { name:'Phân hộ nghìn',       f:'ROUND((20400+400)/1000,0)*1000', x:21000, c:() => roundToUnit(20400+400, 1000) },
+    { name:'Gạo công khai chục',  f:'ROUND(880.7/10,0)*10',       x:880,    c:() => roundToUnit(880.7, 10) },
+    { name:'Gia vị 4% × 71.5M',   f:'ROUND(71573500*0.04/1000,0)*1000', x:2863000, c:() => roundToUnit(71573500*0.04, 1000) },
+    { name:'Tổng tiền TC1/ngày',  f:'14400+28800+28800',          x:72000,  c:() => 14400+28800+28800 },
+    // === Tồn kho test (SUMPRODUCT ROUND) ===
+    { name:'SUMPRODUCT(ROUND TC1)', f:'ROUND(0.136*100,1)+ROUND(0.272*100,1)+ROUND(0.272*100,1)', x:68.0,
+      c:() => roundExcel(0.136*100,1) + roundExcel(0.272*100,1) + roundExcel(0.272*100,1) },
+    { name:'Mì chính: ROUND TC1', f:'ROUND(0.0004*100,2)+ROUND(0.0008*100,2)*2', x:0.20,
+      c:() => roundExcel(0.0004*100,2) + roundExcel(0.0008*100,2)*2 },
+  ];
+
+  let pass = 0;
+  const html = tests.map(t => {
+    let got, ok;
+    try { got = t.c(); ok = Math.abs(got - t.x) < 1e-9; } catch(e) { got = 'ERR'; ok = false; }
+    if (ok) pass++;
+    return `<tr>
+      <td>${t.name}</td>
+      <td><span class="code">${t.f}</span></td>
+      <td class="num">${typeof t.x === 'number' ? fmtN(t.x, t.x % 1 === 0 ? 0 : 2) : t.x}</td>
+      <td class="num">${typeof got === 'number' ? fmtN(got, t.x % 1 === 0 ? 0 : 2) : got}</td>
+      <td>${ok ? '<span class="pill pill-s">✓ Pass</span>' : '<span class="pill pill-d">✗ Fail</span>'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('test-results').innerHTML = html;
+  const sum = document.getElementById('test-summary');
+  sum.textContent = `${pass}/${tests.length} pass`;
+  sum.className = 'pill ' + (pass === tests.length ? 'pill-s' : 'pill-d');
+}
+
+// ============================================================
+// SECTION: MUC LUC (cấu hình đơn vị)
+// ============================================================
+function renderMucLuc() {
+  setSubtitle('Thông tin đơn vị, nhân sự, kỳ kế toán hiện tại');
+  const c = DATA.cauHinh;
+  const monthOpts = Array.from({length:12}, (_,i) => `<option value="${i+1}" ${c.kyHienTai.thang===i+1?'selected':''}>Tháng ${i+1}</option>`).join('');
+  const yearOpts = Array.from({length:5}, (_,i) => { const y = new Date().getFullYear() - 2 + i; return `<option value="${y}" ${c.kyHienTai.nam===y?'selected':''}>${y}</option>`; }).join('');
+  document.getElementById('page-body').innerHTML = `
+    <div class="card-x">
+      <div class="card-x-head"><h3>Đơn vị</h3></div>
+      <div class="card-x-body fx">
+        <div class="fx-row">
+          <div style="grid-column:span 2"><label>Tên đơn vị</label><input id="ml-donvi" value="${c.donVi}"></div>
+          <div style="grid-column:span 2"><label>Tên in hoa</label><input id="ml-donvi-hoa" value="${c.donViInHoa}"></div>
+          <div><label>Tổng quân số</label><input type="number" id="ml-qs" value="${c.quanSo}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-x">
+      <div class="card-x-head"><h3>Nhân sự</h3></div>
+      <div class="card-x-body fx">
+        <div class="fx-row">
+          <div><label>Chỉ huy</label><input id="ml-chi-huy" value="${c.chiHuy}"></div>
+          <div><label>Quản lý</label><input id="ml-quan-ly" value="${c.quanLy}"></div>
+          <div><label>Tiếp phẩm</label><input id="ml-tiep-pham" value="${c.tiepPham}"></div>
+          <div><label>Thủ kho</label><input id="ml-thu-kho" value="${c.thuKho}"></div>
+          <div><label>Quân y</label><input id="ml-quan-y" value="${c.quanY}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-x">
+      <div class="card-x-head"><h3>Kỳ kế toán &amp; tham số tài chính</h3></div>
+      <div class="card-x-body fx">
+        <div class="fx-row">
+          <div><label>Tháng làm sổ</label><select id="ml-thang">${monthOpts}</select></div>
+          <div><label>Năm làm sổ</label><select id="ml-nam">${yearOpts}</select></div>
+          <div><label>Tiền ăn thêm (đ/ng)</label><input type="number" id="ml-tat" value="${c.tienAnThem}"></div>
+          <div><label>Thu chuẩn (đ/ng/tháng)</label><input type="number" id="ml-tc-thang" value="${c.thuChuan}"></div>
+          <div><label>Tháng trước chuyển sang (đ)</label><input type="number" id="ml-chuyen" value="${c.chuyenThangTruoc}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-x">
+      <div class="card-x-head"><h3>Giá bữa Công khai TC</h3></div>
+      <div class="card-x-body fx">
+        <div class="fx-row">
+          <div><label>Giá sáng (đ)</label><input type="number" id="ml-gia-s" value="${c.giaSangCK}"></div>
+          <div><label>Giá trưa (đ)</label><input type="number" id="ml-gia-t" value="${c.giaTruaCK}"></div>
+          <div><label>Giá chiều (đ)</label><input type="number" id="ml-gia-c" value="${c.giaChieuCK}"></div>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <button class="btn-x btn-p" id="ml-save">Lưu cấu hình</button>
+    </div>
+  `;
+  document.getElementById('ml-save').onclick = () => {
+    const c = DATA.cauHinh;
+    c.donVi = document.getElementById('ml-donvi').value;
+    c.donViInHoa = document.getElementById('ml-donvi-hoa').value;
+    c.quanSo = +document.getElementById('ml-qs').value || 0;
+    c.chiHuy = document.getElementById('ml-chi-huy').value;
+    c.quanLy = document.getElementById('ml-quan-ly').value;
+    c.tiepPham = document.getElementById('ml-tiep-pham').value;
+    c.thuKho = document.getElementById('ml-thu-kho').value;
+    c.quanY = document.getElementById('ml-quan-y').value;
+    c.kyHienTai = { thang: +document.getElementById('ml-thang').value, nam: +document.getElementById('ml-nam').value };
+    c.tienAnThem = +document.getElementById('ml-tat').value || 0;
+    c.thuChuan = +document.getElementById('ml-tc-thang').value || 0;
+    c.chuyenThangTruoc = +document.getElementById('ml-chuyen').value || 0;
+    c.giaSangCK = +document.getElementById('ml-gia-s').value || 0;
+    c.giaTruaCK = +document.getElementById('ml-gia-t').value || 0;
+    c.giaChieuCK = +document.getElementById('ml-gia-c').value || 0;
+    saveData();
+    alert('Đã lưu cấu hình');
+  };
+}
+
+// ============================================================
+// SECTION: TIEU CHUAN (read-only, auto)
+// ============================================================
+window.tieuChuanSeedDinhLuong = function() {
+  if (!confirm('Nạp lại bảng Tiêu chuẩn từ Excel gốc? Sẽ ghi đè dữ liệu hiện tại.')) return;
+  DATA.tcBang = JSON.parse(JSON.stringify(TC_BANG_DEFAULT));
+  _syncTcBangDownstream();
+  saveData();
+  renderTieuChuan();
+  alert(`Đã nạp lại ${DATA.tcBang.length} dòng Tiêu chuẩn từ Excel. Đi chợ + Mặt hàng đã đồng bộ.`);
+};
+
+// Sync tcBang -> tieuChuan (row Tiền ăn) và dinhLuongBua (cho Đi chợ)
+function _syncTcBangDownstream() {
+  if (!DATA.tcBang) return;
+  // Row 1 = Tiền ăn → DATA.tieuChuan
+  const tienAn = DATA.tcBang.find(r => r.ten === 'Tiền ăn');
+  if (tienAn && Array.isArray(DATA.tieuChuan)) {
+    [0,1,2,3].forEach(tcIdx => {
+      const tc = DATA.tieuChuan[tcIdx];
+      if (!tc) return;
+      tc.tienSang  = +tienAn.cells[tcIdx*4    ] || 0;
+      tc.tienTrua  = +tienAn.cells[tcIdx*4 + 1] || 0;
+      tc.tienChieu = +tienAn.cells[tcIdx*4 + 2] || 0;
+    });
+  }
+  // Các row có mhMa → dinhLuongBua (12 ô = 4 TC × 3 bữa) để dichoDefaultSL đọc
+  if (!DATA.dinhLuongBua) DATA.dinhLuongBua = {};
+  DATA.tcBang.forEach(r => {
+    if (!r.mhMa) return;
+    const dl = [];
+    for (let tcIdx = 0; tcIdx < 4; tcIdx++) {
+      for (let b = 0; b < 3; b++) {
+        dl.push(+r.cells[tcIdx*4 + b] || 0);
+      }
+    }
+    const dec = (TC_DINH_LUONG[r.mhMa]?.dec) ?? 1;
+    DATA.dinhLuongBua[r.mhMa] = { dl, dec };
+  });
+  // Sync giá → matHang
+  DATA.tcBang.forEach(r => {
+    if (!r.mhMa || r.gia == null) return;
+    const mh = DATA.matHang.find(m => m.ma === r.mhMa);
+    if (mh) mh.gia = +r.gia || 0;
+  });
+}
+
+function renderTieuChuan() {
+  setSubtitle('Bảng tiêu chuẩn (Excel sheet Tiêu chuẩn) — 4 TC × Sáng/Trưa/Chiều/Tổng + Giá. Sửa trực tiếp ô, auto lưu.');
+  setActions(`<button class="btn-x" onclick="window.tieuChuanSeedDinhLuong()" title="Nạp lại bảng tiêu chuẩn từ Excel gốc">↻ Nạp lại từ Excel</button>`);
+
+  if (!DATA.tcBang || !DATA.tcBang.length) {
+    DATA.tcBang = JSON.parse(JSON.stringify(TC_BANG_DEFAULT));
+    saveData();
+  }
+
+  // Định dạng số: bỏ trailing zeros, giữ tối đa 4 chữ số thập phân
+  const fmtCell = v => {
+    if (v == null || v === '') return '';
+    if (Number.isInteger(v)) return v.toLocaleString('en-US');
+    return (+v).toLocaleString('en-US', { maximumFractionDigits: 6 });
+  };
+
+  const rows = DATA.tcBang.map((r, ri) => {
+    let cellHtml = '';
+    for (let tcIdx = 0; tcIdx < 4; tcIdx++) {
+      for (let col = 0; col < 4; col++) {
+        const idx = tcIdx*4 + col;
+        const v = r.cells[idx];
+        const borderLeft = col === 0 ? 'border-left:1px solid var(--c-border);' : '';
+        const isTong = col === 3;
+        const bg = isTong ? 'background:#f8fafc;' : '';
+        cellHtml += `<td class="num" style="${borderLeft}${bg}">
+          <input type="number" step="any" value="${v == null ? '' : v}"
+                 class="tcb-cell" data-ri="${ri}" data-idx="${idx}"
+                 style="width:74px;text-align:right;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;font-size:11.5px${isTong?';font-weight:600':''}">
+        </td>`;
+      }
+    }
+    const giaHtml = r.gia == null
+      ? `<td class="num" style="border-left:1px solid var(--c-border)"><span class="text-muted">—</span></td>`
+      : `<td class="num" style="border-left:1px solid var(--c-border)">
+          <input type="number" step="any" value="${r.gia}" class="tcb-gia" data-ri="${ri}"
+                 style="width:90px;text-align:right;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;font-size:11.5px">
+        </td>`;
+    return `<tr data-ri="${ri}">
+      <td class="num">${r.stt}</td>
+      <td><strong>${r.ten}</strong></td>
+      <td><span class="code">${r.dvt}</span></td>
+      ${cellHtml}
+      ${giaHtml}
+    </tr>`;
+  }).join('');
+
+  document.getElementById('page-body').innerHTML = `
+    <div class="banner banner-i">
+      <span class="b-ico">ⓘ</span>
+      <div>Bảng <strong>Tiêu chuẩn</strong> y hệt Excel: 11 dòng × 4 TC (S/T/C/Tổng) + Giá. Sửa ô nào → auto lưu, tự đồng bộ giá Mặt hàng + Đi chợ.</div>
+    </div>
+
+    <div class="card-x">
+      <div class="card-x-head"><h3>Tiêu chuẩn ăn (4 TC × Sáng/Trưa/Chiều/Tổng)</h3></div>
+      <div class="card-x-body p-0">
+        <div style="overflow:auto;max-width:100%">
+        <table class="t t-compact" id="tbl-tcb">
+          <thead>
+            <tr>
+              <th rowspan="2" class="num">STT</th>
+              <th rowspan="2">Tên thực phẩm</th>
+              <th rowspan="2">ĐVT</th>
+              <th colspan="4" class="num" style="border-left:1px solid var(--c-border)">TIÊU CHUẨN 1</th>
+              <th colspan="4" class="num" style="border-left:1px solid var(--c-border)">TIÊU CHUẨN 2</th>
+              <th colspan="4" class="num" style="border-left:1px solid var(--c-border)">TIÊU CHUẨN 3</th>
+              <th colspan="4" class="num" style="border-left:1px solid var(--c-border)">TIÊU CHUẨN 4</th>
+              <th rowspan="2" class="num" style="border-left:1px solid var(--c-border)">Giá</th>
+            </tr>
+            <tr>
+              ${['','','',''].map((_,i) => `
+                <th class="num" style="${i===0?'border-left:1px solid var(--c-border);':''}">Sáng</th>
+                <th class="num">Trưa</th>
+                <th class="num">Chiều</th>
+                <th class="num" style="background:#f8fafc">Tổng</th>
+              `).join('')}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+
+    <details class="fold"><summary>Xem công thức Excel</summary>
+      <div class="formula"><span class="cmt"># Xuất kho 1 mặt hàng / 1 ngày (Tồn kho!D4)</span>
+= SUMPRODUCT(ROUND(<span class="kw">'Tiêu chuẩn'</span>!$D$5:$F$5 * <span class="kw">'Quy đổi'</span>!$C4:$E4, 1))  <span class="cmt"># TC1 S/T/C</span>
++ SUMPRODUCT(ROUND(<span class="kw">'Tiêu chuẩn'</span>!$H$5:$J$5 * <span class="kw">'Quy đổi'</span>!$F4:$H4, 1))  <span class="cmt"># TC2 S/T/C</span>
++ SUMPRODUCT(ROUND(<span class="kw">'Tiêu chuẩn'</span>!$L$5:$N$5 * <span class="kw">'Quy đổi'</span>!$I4:$K4, 1))  <span class="cmt"># TC3 S/T/C</span>
++ SUMPRODUCT(ROUND(<span class="kw">'Tiêu chuẩn'</span>!$P$5:$R$5 * <span class="kw">'Quy đổi'</span>!$L4:$N4, 1))  <span class="cmt"># TC4 S/T/C</span></div>
+    </details>
+  `;
+
+  // Sửa ô định lượng
+  document.querySelectorAll('.tcb-cell').forEach(inp => {
+    inp.onchange = e => {
+      const ri = +e.target.dataset.ri;
+      const idx = +e.target.dataset.idx;
+      const val = e.target.value === '' ? null : (+e.target.value);
+      DATA.tcBang[ri].cells[idx] = val;
+      _syncTcBangDownstream();
+      saveData();
+      e.target.style.background = '#ecfdf5';
+      setTimeout(() => e.target.style.background = '', 600);
+    };
+  });
+  // Sửa giá
+  document.querySelectorAll('.tcb-gia').forEach(inp => {
+    inp.onchange = e => {
+      const ri = +e.target.dataset.ri;
+      DATA.tcBang[ri].gia = e.target.value === '' ? null : (+e.target.value);
+      _syncTcBangDownstream();
+      saveData();
+      e.target.style.background = '#ecfdf5';
+      setTimeout(() => e.target.style.background = '', 600);
+    };
+  });
+}
+
+// ============================================================
+// SECTION: MAT HANG
+// ============================================================
+// ----- CSV helpers (dùng cho Mặt hàng) -----
+function csvEscape(v) {
+  const s = String(v == null ? '' : v);
+  if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+function csvBuild(headers, rows) {
+  const lines = [headers.join(',')];
+  rows.forEach(row => lines.push(headers.map(h => csvEscape(row[h])).join(',')));
+  return '﻿' + lines.join('\n'); // BOM để Excel đọc UTF-8 đúng
+}
+function csvParse(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = []; let cur = [], field = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i+1] === '"') { field += '"'; i++; } else q = false; }
+      else field += c;
+    } else {
+      if (c === '"') q = true;
+      else if (c === ',') { cur.push(field); field = ''; }
+      else if (c === '\r' || c === '\n') {
+        if (field !== '' || cur.length) { cur.push(field); rows.push(cur); cur = []; field = ''; }
+        if (c === '\r' && text[i+1] === '\n') i++;
+      } else field += c;
+    }
+  }
+  if (field !== '' || cur.length) { cur.push(field); rows.push(cur); }
+  return rows;
+}
+function downloadFile(name, text, mime) {
+  const blob = new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a);
+  a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+function pickFile(accept, cb) {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = accept;
+  inp.onchange = e => { const f = e.target.files[0]; if (f) cb(f); };
+  inp.click();
+}
+
+window.matHangExportCSV = function() {
+  const headers = ['ma','ten','nhom','dvt','gia','isTC','decimal'];
+  const rows = DATA.matHang.map(m => ({
+    ma: m.ma, ten: m.ten, nhom: m.nhom, dvt: m.dvt,
+    gia: m.gia, isTC: m.isTC ? 1 : 0, decimal: m.decimal == null ? 1 : m.decimal,
+  }));
+  downloadFile('mat_hang.csv', csvBuild(headers, rows), 'text/csv');
+};
+
+window.matHangImportCSV = function() {
+  pickFile('.csv,text/csv', file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const rows = csvParse(ev.target.result);
+      if (rows.length < 2) { alert('File CSV trống hoặc thiếu dòng dữ liệu'); return; }
+      const headers = rows[0].map(h => h.trim());
+      const idx = name => headers.indexOf(name);
+      const iMa = idx('ma'), iTen = idx('ten'), iNhom = idx('nhom'), iDvt = idx('dvt'),
+            iGia = idx('gia'), iIsTC = idx('isTC'), iDec = idx('decimal');
+      if (iMa < 0 || iTen < 0) { alert('CSV thiếu cột "ma" hoặc "ten"'); return; }
+      let added = 0, updated = 0;
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        const ma = (row[iMa] || '').trim();
+        if (!ma) continue;
+        const obj = {
+          ma,
+          ten: (row[iTen] || '').trim(),
+          nhom: iNhom >= 0 ? (row[iNhom] || '').trim() : '',
+          dvt:  iDvt  >= 0 ? (row[iDvt]  || '').trim() : '',
+          gia:  iGia  >= 0 ? (+row[iGia] || 0) : 0,
+          isTC: iIsTC >= 0 ? (row[iIsTC] === '1' || /^true$/i.test(row[iIsTC] || '')) : false,
+          decimal: (iDec >= 0 && row[iDec] !== '' && row[iDec] != null) ? (+row[iDec] || 0) : 1,
+        };
+        const existing = DATA.matHang.find(m => m.ma === ma);
+        if (existing) { Object.assign(existing, obj); updated++; }
+        else { DATA.matHang.push({ id: nextId(DATA.matHang), ...obj }); added++; }
+      }
+      saveData(); renderMatHang();
+      alert(`Đã nạp CSV: thêm ${added}, cập nhật ${updated} mặt hàng.`);
+    };
+    reader.readAsText(file, 'utf-8');
+  });
+};
+
+function renderMatHang() {
+  setSubtitle('Danh mục thực phẩm, chất đốt — cấu hình giá và làm tròn. Xuất CSV để dùng lại lần sau.');
+  setActions(`
+    <button class="btn-x" onclick="window.matHangImportCSV()" title="Nạp danh sách mặt hàng từ CSV (cập nhật theo mã)">⬆ Nạp CSV</button>
+    <button class="btn-x" onclick="window.matHangExportCSV()" title="Tải file mat_hang.csv">⬇ Xuất CSV</button>
+    <button class="btn-x btn-p" onclick="window.editMH(null)">＋ Thêm mặt hàng</button>
+  `);
+  const rows = DATA.matHang.map(mh => `<tr>
+    <td><span class="code">${mh.ma}</span></td>
+    <td><strong>${mh.ten}</strong></td>
+    <td><span class="pill pill-m">${NHOM_MH[mh.nhom] || mh.nhom}</span></td>
+    <td>${mh.dvt}</td>
+    <td class="num">${fmt(mh.gia)}</td>
+    <td>${mh.isTC ? '<span class="pill pill-i">Tiêu chuẩn</span>' : '<span class="pill pill-m">Theo thực đơn</span>'}</td>
+    <td class="num">${mh.decimal ?? 1}</td>
+    <td class="row-action">
+      <button class="btn-x btn-x-sm" onclick="window.editMH(${mh.id})">Sửa</button>
+      <button class="btn-x btn-x-sm btn-d" onclick="window.delMH(${mh.id})">Xoá</button>
+    </td>
+  </tr>`).join('');
+  document.getElementById('page-body').innerHTML = `<div class="card-x"><div class="card-x-body p-0">
+    <table class="t"><thead><tr>
+      <th>Mã</th><th>Tên</th><th>Nhóm</th><th>ĐVT</th><th class="num">Đơn giá</th><th>Loại</th><th class="num">Làm tròn</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>
+  </div></div>`;
+}
+window.editMH = function(id) {
+  const mh = id ? getMH(id) : { ma:'', ten:'', nhom:'', dvt:'', gia:0, isTC:false, decimal:1 };
+  document.getElementById('mh-id').value = id || '';
+  document.getElementById('mh-ma').value = mh.ma;
+  document.getElementById('mh-ten').value = mh.ten;
+  document.getElementById('mh-nhom').value = mh.nhom || '';
+  document.getElementById('mh-dvt').value = mh.dvt;
+  document.getElementById('mh-gia').value = mh.gia;
+  document.getElementById('mh-dl').value = mh.dinhLuong || '';
+  document.getElementById('mh-decimal').value = mh.decimal ?? 1;
+  document.getElementById('mh-is-tc').value = mh.isTC ? '1' : '0';
+  bootstrap.Modal.getOrCreateInstance('#m-mh').show();
+};
+window.delMH = function(id) {
+  if (!confirm('Xoá mặt hàng này?')) return;
+  DATA.matHang = DATA.matHang.filter(x => x.id !== id);
+  saveData(); renderMatHang();
+};
+document.getElementById('mh-save').onclick = () => {
+  const id = +document.getElementById('mh-id').value || null;
+  const obj = {
+    ma: document.getElementById('mh-ma').value.trim(),
+    ten: document.getElementById('mh-ten').value.trim(),
+    nhom: document.getElementById('mh-nhom').value.trim(),
+    dvt: document.getElementById('mh-dvt').value.trim(),
+    gia: +document.getElementById('mh-gia').value || 0,
+    decimal: +document.getElementById('mh-decimal').value || 0,
+    isTC: document.getElementById('mh-is-tc').value === '1',
+  };
+  if (!obj.ma) { alert('Cần nhập mã'); return; }
+  if (id) Object.assign(getMH(id), obj);
+  else DATA.matHang.push({ id: nextId(DATA.matHang), ...obj });
+  saveData(); renderMatHang();
+  bootstrap.Modal.getInstance('#m-mh').hide();
+};
+
+// ============================================================
+// SECTION: LIST MON
+// ============================================================
+function renderListMon() {
+  setSubtitle('Danh mục món ăn — định lượng (g/người) cho mỗi bữa. Khi đưa vào thực đơn, hệ thống dùng định lượng này để tính xuất nguyên liệu.');
+  setActions(`<button class="btn-x btn-p" onclick="window.editMon(null)">＋ Thêm món</button>`);
+  const rows = DATA.monAn.map(m => {
+    const mh = getMH(m.mhId);
+    const n = NHOM_MON.find(x => x.code === m.nhom);
+    return `<tr>
+      <td><strong>${m.ten}</strong></td>
+      <td><span class="pill pill-m">${n?.ten || m.nhom}</span></td>
+      <td class="num">${m.dlS || '—'}</td>
+      <td class="num">${m.dlT || '—'}</td>
+      <td class="num">${m.dlC || '—'}</td>
+      <td>${mh ? `<span class="code">${mh.ten}</span>` : '<span class="text-muted small">—</span>'}</td>
+      <td class="row-action">
+        <button class="btn-x btn-x-sm" onclick="window.editMon(${m.id})">Sửa</button>
+        <button class="btn-x btn-x-sm btn-d" onclick="window.delMon(${m.id})">Xoá</button>
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('page-body').innerHTML = `<div class="card-x"><div class="card-x-body p-0">
+    <table class="t"><thead><tr>
+      <th>Tên món</th><th>Nhóm</th>
+      <th class="num">ĐL Sáng (g)</th><th class="num">ĐL Trưa (g)</th><th class="num">ĐL Tối (g)</th>
+      <th>Mặt hàng đại diện</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>
+  </div></div>`;
+}
+window.editMon = function(id) {
+  const m = id ? getMon(id) : { ten:'', nhom:'CO', dlS:0, dlT:0, dlC:0, mhId:null };
+  document.getElementById('mon-id').value = id || '';
+  document.getElementById('mon-ten').value = m.ten;
+  document.getElementById('mon-s').value = m.dlS || '';
+  document.getElementById('mon-t').value = m.dlT || '';
+  document.getElementById('mon-c').value = m.dlC || '';
+  document.getElementById('mon-nhom').innerHTML = NHOM_MON.map(n => `<option value="${n.code}" ${n.code===m.nhom?'selected':''}>${n.ten}</option>`).join('');
+  document.getElementById('mon-mh').innerHTML = '<option value="">— Chọn —</option>' +
+    DATA.matHang.map(mh => `<option value="${mh.id}" ${mh.id===m.mhId?'selected':''}>${mh.ten} (${mh.dvt})</option>`).join('');
+  bootstrap.Modal.getOrCreateInstance('#m-mon').show();
+};
+window.delMon = function(id) {
+  if (!confirm('Xoá món này?')) return;
+  DATA.monAn = DATA.monAn.filter(x => x.id !== id);
+  saveData(); renderListMon();
+};
+document.getElementById('mon-save').onclick = () => {
+  const id = +document.getElementById('mon-id').value || null;
+  const obj = {
+    ten: document.getElementById('mon-ten').value.trim(),
+    nhom: document.getElementById('mon-nhom').value,
+    dlS: +document.getElementById('mon-s').value || 0,
+    dlT: +document.getElementById('mon-t').value || 0,
+    dlC: +document.getElementById('mon-c').value || 0,
+    mhId: +document.getElementById('mon-mh').value || null,
+  };
+  if (!obj.ten) { alert('Cần nhập tên món'); return; }
+  if (id) Object.assign(getMon(id), obj);
+  else DATA.monAn.push({ id: nextId(DATA.monAn), ...obj });
+  saveData(); renderListMon();
+  bootstrap.Modal.getInstance('#m-mon').hide();
+};
+
+// ============================================================
+// SECTION: QUAN SO
+// ============================================================
+function renderQuanSo() {
+  const active = DATA.nguoiAn.filter(n => n.active).length;
+  setSubtitle(`${active} người đang phục vụ — tổng ${DATA.nguoiAn.length} người`);
+  setActions(`<button class="btn-x btn-p" onclick="window.editNguoi(null)">＋ Thêm người</button>`);
+  const rows = DATA.nguoiAn.map(n => {
+    const tc = getTC(n.tcId);
+    return `<tr>
+      <td class="num">${n.stt}</td>
+      <td><strong>${n.hoTen}</strong></td>
+      <td><span class="code">${n.capBac}</span></td>
+      <td>${tc ? `<span class="${tcPill(tc.ma)}">${tc.ma}</span>` : '—'}</td>
+      <td>${n.active ? '<span class="pill pill-s">Đang phục vụ</span>' : '<span class="pill pill-m">Ngừng</span>'}</td>
+      <td class="row-action">
+        <button class="btn-x btn-x-sm" onclick="window.editNguoi(${n.id})">Sửa</button>
+        <button class="btn-x btn-x-sm btn-d" onclick="window.delNguoi(${n.id})">Xoá</button>
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('page-body').innerHTML = `<div class="card-x"><div class="card-x-body p-0">
+    <table class="t"><thead><tr>
+      <th class="num">TT</th><th>Họ tên</th><th>Cấp bậc</th><th>TC</th><th>Trạng thái</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>
+  </div></div>`;
+}
+window.editNguoi = function(id) {
+  const n = id ? DATA.nguoiAn.find(x => x.id === id) : { stt:DATA.nguoiAn.length+1, hoTen:'', capBac:'', tcId:1, active:true };
+  document.getElementById('ng-id').value = id || '';
+  document.getElementById('ng-stt').value = n.stt;
+  document.getElementById('ng-ten').value = n.hoTen;
+  document.getElementById('ng-cap').value = n.capBac;
+  document.getElementById('ng-active').checked = n.active;
+  document.getElementById('ng-tc').innerHTML = DATA.tieuChuan.map(tc => `<option value="${tc.id}" ${tc.id===n.tcId?'selected':''}>${tc.ma} - ${tc.ten}</option>`).join('');
+  bootstrap.Modal.getOrCreateInstance('#m-nguoi').show();
+};
+window.delNguoi = function(id) {
+  if (!confirm('Xoá người này?')) return;
+  DATA.nguoiAn = DATA.nguoiAn.filter(x => x.id !== id);
+  Object.keys(DATA.chamCom).forEach(k => { if (k.startsWith(id+'_')) delete DATA.chamCom[k]; });
+  saveData(); renderQuanSo();
+};
+document.getElementById('ng-save').onclick = () => {
+  const id = +document.getElementById('ng-id').value || null;
+  const obj = {
+    stt: +document.getElementById('ng-stt').value || 0,
+    hoTen: document.getElementById('ng-ten').value.trim(),
+    capBac: document.getElementById('ng-cap').value.trim(),
+    tcId: +document.getElementById('ng-tc').value,
+    active: document.getElementById('ng-active').checked,
+  };
+  if (!obj.hoTen) { alert('Cần nhập họ tên'); return; }
+  if (id) Object.assign(DATA.nguoiAn.find(x => x.id === id), obj);
+  else DATA.nguoiAn.push({ id: nextId(DATA.nguoiAn), ...obj });
+  saveData(); renderQuanSo();
+  bootstrap.Modal.getInstance('#m-nguoi').hide();
+};
+
+// ============================================================
+// SECTION: CHAM COM
+// ============================================================
+function renderChamCom() {
+  setSubtitle('Click ô để toggle X (có ăn). Tổng bữa tự cập nhật. Hỗ trợ "Chấm hết" để chấm full tháng nhanh.');
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  setActions(`
+    <span class="text-muted small me-2">Kỳ:</span>
+    <strong style="margin-right:14px">Tháng ${thang}/${nam}</strong>
+    <button class="btn-x" onclick="window.chamHet()">Chấm hết</button>
+    <button class="btn-x btn-d" onclick="window.boChamHet()">Bỏ chấm hết</button>
+  `);
+
+  const ngayMax = dim(thang, nam);
+  const ngayList = Array.from({length:ngayMax}, (_,i) => i+1);
+  const buas = ['S','T','C'];
+
+  let html = '<thead><tr>';
+  html += '<th rowspan="2" style="min-width:38px">TT</th>';
+  html += '<th rowspan="2" style="text-align:left;padding-left:14px">Họ tên</th>';
+  html += '<th rowspan="2">TC</th>';
+  ngayList.forEach(d => html += `<th colspan="3" class="day-sep">${d}</th>`);
+  html += '<th colspan="3" class="total-col">Tổng</th></tr><tr>';
+  ngayList.forEach(() => buas.forEach((b, j) => html += `<th class="${j===2?'day-sep':''}" style="font-size:10px;color:#94a3b8">${b}</th>`));
+  html += '<th class="total-col">S</th><th class="total-col">T</th><th class="total-col">C</th></tr></thead><tbody>';
+
+  DATA.nguoiAn.filter(n => n.active).forEach(n => {
+    const tc = getTC(n.tcId);
+    let tS=0, tT=0, tC=0;
+    let row = `<tr data-nguoi-id="${n.id}">`;
+    row += `<td class="ci" style="text-align:center">${n.stt}</td>`;
+    row += `<td class="ci name-col">${n.hoTen} <small>${n.capBac}</small></td>`;
+    row += `<td class="ci"><span class="${tcPill(tc?.ma||'')}">${tc?.ma||''}</span></td>`;
+    ngayList.forEach(d => {
+      buas.forEach((b, j) => {
+        const key = `${n.id}_${d}_${b}`;
+        const an = !!DATA.chamCom[key];
+        if (an) { if (b==='S') tS++; else if (b==='T') tT++; else tC++; }
+        row += `<td class="cc ${an?'an':''} ${j===2?'day-sep':''}" data-key="${key}" data-bua="${b}"></td>`;
+      });
+    });
+    row += `<td class="total-col tong-s">${tS}</td><td class="total-col tong-t">${tT}</td><td class="total-col tong-c">${tC}</td></tr>`;
+    html += row;
+  });
+  html += '</tbody>';
+  document.getElementById('page-body').innerHTML = `<div class="cham-wrap"><table class="cham-grid">${html}</table></div>`;
+
+  document.querySelectorAll('.cc').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const key = cell.dataset.key;
+      const an = !DATA.chamCom[key];
+      if (an) DATA.chamCom[key] = true; else delete DATA.chamCom[key];
+      cell.classList.toggle('an', an);
+      const row = cell.closest('tr');
+      let s=0,t=0,c=0;
+      row.querySelectorAll('.cc.an').forEach(c2 => {
+        const b = c2.dataset.bua;
+        if (b==='S') s++; else if (b==='T') t++; else c++;
+      });
+      row.querySelector('.tong-s').textContent = s;
+      row.querySelector('.tong-t').textContent = t;
+      row.querySelector('.tong-c').textContent = c;
+      saveData();
+    });
+  });
+}
+window.chamHet = function() {
+  if (!confirm('Chấm có ăn cho TẤT CẢ ô tháng này?')) return;
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  const ngayMax = dim(thang, nam);
+  DATA.nguoiAn.filter(n => n.active).forEach(n => {
+    for (let d=1; d<=ngayMax; d++) ['S','T','C'].forEach(b => DATA.chamCom[`${n.id}_${d}_${b}`] = true);
+  });
+  saveData(); renderChamCom();
+};
+window.boChamHet = function() {
+  if (!confirm('Xoá hết chấm tháng này?')) return;
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  const ngayMax = dim(thang, nam);
+  DATA.nguoiAn.filter(n => n.active).forEach(n => {
+    for (let d=1; d<=ngayMax; d++) ['S','T','C'].forEach(b => delete DATA.chamCom[`${n.id}_${d}_${b}`]);
+  });
+  saveData(); renderChamCom();
+};
+
+// ============================================================
+// SECTION: CHAM COM (Thuc te)
+// ============================================================
+function renderChamThucTe() {
+  setSubtitle('Tổng số bữa thực ăn theo từng người — tự tính từ Chấm cơm');
+  const rows = DATA.nguoiAn.filter(n => n.active).map(n => {
+    const tc = getTC(n.tcId);
+    const bs = demSoBua(n.id, 'S');
+    const bt = demSoBua(n.id, 'T');
+    const bc = demSoBua(n.id, 'C');
+    const tienAn = roundMoney(bs*tc.tienSang + bt*tc.tienTrua + bc*tc.tienChieu);
+    return `<tr>
+      <td class="num">${n.stt}</td>
+      <td><strong>${n.hoTen}</strong></td>
+      <td><span class="${tcPill(tc.ma)}">${tc.ma}</span></td>
+      <td class="num">${bs}</td><td class="num">${bt}</td><td class="num">${bc}</td>
+      <td class="num"><strong>${fmt(tienAn)}</strong></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('page-body').innerHTML = `<div class="card-x"><div class="card-x-body p-0">
+    <table class="t"><thead><tr>
+      <th class="num">TT</th><th>Họ tên</th><th>TC</th>
+      <th class="num">Bữa Sáng</th><th class="num">Bữa Trưa</th><th class="num">Bữa Chiều</th>
+      <th class="num">Tổng tiền (đ)</th>
+    </tr></thead><tbody>${rows}</tbody></table>
+  </div></div>`;
+}
+
+// ============================================================
+// SECTION: QUY DOI 31 ngày
+// ============================================================
+function renderQuyDoi() {
+  setSubtitle('Tổng quân số ăn từng ngày × TC × Bữa — tự tính từ Chấm cơm. Đây là input cho công thức Tồn kho!D4 (xuất kho).');
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  const ngayMax = dim(thang, nam);
+  let rowsHtml = '';
+  for (let d = 1; d <= ngayMax; d++) {
+    const tcCells = DATA.tieuChuan.map(tc => {
+      const s = demNguoiAnTheoNgayBua(d, 'S', tc.id);
+      const t = demNguoiAnTheoNgayBua(d, 'T', tc.id);
+      const c = demNguoiAnTheoNgayBua(d, 'C', tc.id);
+      return `<td class="num">${s}</td><td class="num">${t}</td><td class="num">${c}</td>`;
+    }).join('');
+    const tS = demNguoiAnTheoNgayBua(d, 'S');
+    const tT = demNguoiAnTheoNgayBua(d, 'T');
+    const tC = demNguoiAnTheoNgayBua(d, 'C');
+    rowsHtml += `<tr>
+      <td><strong>${String(d).padStart(2,'0')}/${String(thang).padStart(2,'0')}/${nam}</strong></td>
+      ${tcCells}
+      <td class="num" style="background:#fff7ed;font-weight:700;color:#c2410c">${tS}</td>
+      <td class="num" style="background:#fff7ed;font-weight:700;color:#c2410c">${tT}</td>
+      <td class="num" style="background:#fff7ed;font-weight:700;color:#c2410c">${tC}</td>
+    </tr>`;
+  }
+  document.getElementById('page-body').innerHTML = `<div class="card-x"><div class="card-x-body p-0">
+    <table class="t t-compact"><thead><tr>
+      <th rowspan="2">Ngày</th>
+      ${DATA.tieuChuan.map(tc => `<th colspan="3" class="num">${tc.ma}</th>`).join('')}
+      <th colspan="3" class="num" style="background:#fff7ed;color:#c2410c">Cộng</th>
+    </tr><tr>
+      ${DATA.tieuChuan.map(() => '<th class="num">S</th><th class="num">T</th><th class="num">C</th>').join('')}
+      <th class="num">S</th><th class="num">T</th><th class="num">C</th>
+    </tr></thead><tbody>${rowsHtml}</tbody></table>
+  </div></div>`;
+}
+
+// ============================================================
+// SECTION: THUC DON tuần (input)
+// ============================================================
+let TD_CURRENT_WEEK_START = null; // YYYY-MM-DD của thứ Hai
+function renderThucDon() {
+  setSubtitle('Lập thực đơn cho tuần — click "+ Thêm" để chọn món. Hệ thống dùng định lượng × quân số chấm cơm để xuất kho tự động.');
+
+  if (!TD_CURRENT_WEEK_START) {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    TD_CURRENT_WEEK_START = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  setActions(`
+    <button class="btn-x" onclick="window.tdPrevWeek()">◀ Tuần trước</button>
+    <button class="btn-x" onclick="window.tdNextWeek()">Tuần sau ▶</button>
+  `);
+
+  const start = new Date(TD_CURRENT_WEEK_START);
+  const days = Array.from({length:7}, (_,i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return d;
+  });
+
+  const dayHtml = days.map(d => {
+    const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const td = DATA.thucDon[ymd] || { S:[], T:[], C:[] };
+    const thuNames = ['CN','T.2','T.3','T.4','T.5','T.6','T.7'];
+    const buaHtml = BUAS.map(b => {
+      const items = (td[b.code] || []);
+      const monHtml = items.map((it, idx) => {
+        const mon = getMon(it.monId);
+        return `<div class="td-mon"><span>${mon?.ten || '?'}</span><span class="dl">${it.dl}g <span class="td-rm" onclick="window.tdRemove('${ymd}','${b.code}',${idx})">✕</span></span></div>`;
+      }).join('') || '<div class="text-muted small" style="padding:2px 0">(chưa có món)</div>';
+      return `<div class="td-bua">
+        <div class="td-bua-label">${b.ten}</div>
+        ${monHtml}
+        <div class="td-add" onclick="window.tdAdd('${ymd}','${b.code}')">+ Thêm món</div>
+      </div>`;
+    }).join('');
+    return `<div class="td-day">
+      <div class="td-day-head"><span>${thuNames[d.getDay()]}</span><span class="text-muted small">${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}</span></div>
+      ${buaHtml}
+    </div>`;
+  }).join('');
+
+  const endDate = days[6];
+  const rangeStr = `${String(start.getDate()).padStart(2,'0')}/${start.getMonth()+1} → ${String(endDate.getDate()).padStart(2,'0')}/${endDate.getMonth()+1}/${endDate.getFullYear()}`;
+
+  document.getElementById('page-body').innerHTML = `
+    <div class="card-x">
+      <div class="card-x-head"><h3>Tuần: ${rangeStr}</h3></div>
+      <div class="card-x-body">
+        <div class="td-grid">${dayHtml}</div>
+      </div>
+    </div>
+    <div class="banner banner-w">
+      <span class="b-ico">ⓘ</span>
+      <div><strong>Lưu ý:</strong> Thực đơn tuần là <strong>tham khảo</strong> — gợi ý các món sẽ nấu. Mặt hàng tươi (thịt/cá/rau...) phải <strong>nhập tay vào Đi chợ</strong> ở từng bữa. Phần Phiếu xuất / Tồn kho dùng định lượng tiêu chuẩn × QS, không phụ thuộc thực đơn này.</div>
+    </div>
+  `;
+}
+window.tdPrevWeek = function() {
+  const d = new Date(TD_CURRENT_WEEK_START);
+  d.setDate(d.getDate() - 7);
+  TD_CURRENT_WEEK_START = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  renderThucDon();
+};
+window.tdNextWeek = function() {
+  const d = new Date(TD_CURRENT_WEEK_START);
+  d.setDate(d.getDate() + 7);
+  TD_CURRENT_WEEK_START = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  renderThucDon();
+};
+window.tdAdd = function(ngay, bua) {
+  document.getElementById('tdm-ngay').value = ngay;
+  document.getElementById('tdm-bua').value = bua;
+  document.getElementById('tdm-bua-display').textContent = `Ngày ${ymdToDmy(ngay)} - ${BUAS.find(b => b.code===bua).ten}`;
+  document.getElementById('tdm-mon').innerHTML = DATA.monAn.map(m => `<option value="${m.id}">${m.ten}</option>`).join('');
+  document.getElementById('tdm-mon').onchange = () => {
+    const m = getMon(+document.getElementById('tdm-mon').value);
+    const dl = bua==='S'?m.dlS:bua==='T'?m.dlT:m.dlC;
+    document.getElementById('tdm-dl').value = dl;
+  };
+  // Trigger to set default
+  const mDef = getMon(DATA.monAn[0]?.id);
+  if (mDef) {
+    document.getElementById('tdm-dl').value = bua==='S'?mDef.dlS:bua==='T'?mDef.dlT:mDef.dlC;
+  }
+  bootstrap.Modal.getOrCreateInstance('#m-tdmon').show();
+};
+window.tdRemove = function(ngay, bua, idx) {
+  if (!confirm('Xoá món này khỏi thực đơn?')) return;
+  DATA.thucDon[ngay][bua].splice(idx, 1);
+  saveData(); renderThucDon();
+};
+document.getElementById('tdm-save').onclick = () => {
+  const ngay = document.getElementById('tdm-ngay').value;
+  const bua = document.getElementById('tdm-bua').value;
+  const monId = +document.getElementById('tdm-mon').value;
+  const dl = +document.getElementById('tdm-dl').value || 0;
+  if (!monId) { alert('Chọn món'); return; }
+  if (!DATA.thucDon[ngay]) DATA.thucDon[ngay] = { S:[], T:[], C:[] };
+  DATA.thucDon[ngay][bua].push({ monId, dl });
+  saveData(); renderThucDon();
+  bootstrap.Modal.getInstance('#m-tdmon').hide();
+};
+
+// ============================================================
+// SECTION: DI CHO (nhập tay - mặc định lấy định lượng TC1 × QS)
+// ============================================================
+let DICHO_DATE = null;
+const DICHO_TC_ITEMS = ['GAO','VLAC','DAU','MAM','MUOI','MICH','DDIEZ','DRB','GVI'];
+const DICHO_DEFAULT_PCT = { DDIEZ:5, DRB:1, GVI:3 };
+const DICHO_FREE_ROWS = 20;  // số dòng trống mặc định mỗi bữa cho user tự nhập tên/SL/giá
+
+function dichoTienBuaTC1(bua) {
+  const tc1 = DATA.tieuChuan.find(x => x.id === 1);
+  if (!tc1) return 0;
+  return bua==='S' ? tc1.tienSang : bua==='T' ? tc1.tienTrua : tc1.tienChieu;
+}
+
+// Lấy QS mặc định cho bữa: ưu tiên chấm cơm, fallback về cấu hình
+function dichoDefaultQS(ngay, bua) {
+  const [y,m,d] = ngay.split('-').map(Number);
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  if (y === nam && m === thang) {
+    const q = demNguoiAnTheoNgayBua(d, bua);
+    if (q > 0) return q;
+  }
+  return DATA.cauHinh.quanSo || 0;
+}
+
+// Sinh default SL của mặt hàng TC theo bữa × QS
+// Đọc từ DATA.dinhLuongBua / DATA.pctMuc (sửa được từ Tiêu chuẩn ăn) -> fallback const
+function dichoDefaultSL(ma, qs, bua) {
+  const mh = DATA.matHang.find(m => m.ma === ma);
+  if (!mh) return 0;
+  if (mh.dvt === '%') {
+    const pct = (DATA.pctMuc && DATA.pctMuc[ma] != null) ? +DATA.pctMuc[ma] : (DICHO_DEFAULT_PCT[ma] || 0);
+    return pct;
+  }
+  const tcDL = (DATA.dinhLuongBua && DATA.dinhLuongBua[ma]) || TC_DINH_LUONG[ma];
+  if (!tcDL) return 0;
+  const dl = tcDL.dl[bua==='S'?0:bua==='T'?1:2] || 0;
+  return roundExcel(dl * qs, tcDL.dec ?? 1);
+}
+
+function _emptyFreeRows() {
+  return Array.from({length: DICHO_FREE_ROWS}, () => ({ ten:'', sl:0, gia:0 }));
+}
+function dichoInitDay(ngay) {
+  const day = {
+    S:{qs:0,anThem:0,items:[],freeItems:_emptyFreeRows()},
+    T:{qs:0,anThem:0,items:[],freeItems:_emptyFreeRows()},
+    C:{qs:0,anThem:0,items:[],freeItems:_emptyFreeRows()},
+  };
+  ['S','T','C'].forEach(b => {
+    day[b].qs = dichoDefaultQS(ngay, b);
+    DICHO_TC_ITEMS.forEach(ma => {
+      const mh = DATA.matHang.find(m => m.ma === ma);
+      if (!mh) return;
+      day[b].items.push({ mhId: mh.id, sl: dichoDefaultSL(ma, day[b].qs, b) });
+    });
+  });
+  DATA.diCho[ngay] = day;
+  saveData();
+  return day;
+}
+function _ensureFreeRows(day) {
+  ['S','T','C'].forEach(b => {
+    if (!day[b].freeItems) day[b].freeItems = [];
+    // Migrate non-TC items cũ từ day[b].items sang freeItems
+    const stillTC = [];
+    day[b].items.forEach(it => {
+      const mh = getMH(it.mhId);
+      if (mh && DICHO_TC_ITEMS.includes(mh.ma)) {
+        stillTC.push(it);
+      } else if (mh) {
+        // migrate
+        day[b].freeItems.push({ ten: mh.ten, sl: +it.sl || 0, gia: +(it.gia ?? mh.gia) || 0 });
+      }
+    });
+    day[b].items = stillTC;
+    // Pad to 20
+    while (day[b].freeItems.length < DICHO_FREE_ROWS) day[b].freeItems.push({ ten:'', sl:0, gia:0 });
+  });
+}
+
+function dichoItemGia(item) {
+  const mh = getMH(item.mhId);
+  if (!mh || mh.dvt === '%') return 0;
+  return item.gia != null ? +item.gia : +mh.gia;
+}
+// SL hiệu lực: TC → auto theo ĐL × QS bữa (không lưu); non-TC → user nhập
+function dichoItemSL(item, qs, bua) {
+  const mh = getMH(item.mhId);
+  if (mh && DICHO_TC_ITEMS.includes(mh.ma)) return dichoDefaultSL(mh.ma, qs, bua);
+  return +item.sl || 0;
+}
+function dichoRowTien(item, sl, congBua) {
+  const mh = getMH(item.mhId);
+  if (!mh) return 0;
+  if (mh.dvt === '%') return roundToUnit((+sl/100) * congBua, 1000);
+  return roundMoney(+sl * dichoItemGia(item));
+}
+
+function renderDiCho() {
+  setSubtitle('Lập danh sách đi chợ theo từng bữa — 9 mặt hàng TC tự sinh theo TC1 × QS, dưới có 20 dòng trống cho bạn tự nhập Tên / SL / Giá tươi.');
+  if (!DATA.diCho) DATA.diCho = {};
+
+  if (!DICHO_DATE) {
+    const { thang, nam } = DATA.cauHinh.kyHienTai;
+    const today = new Date();
+    const useToday = (today.getMonth()+1 === thang) && (today.getFullYear() === nam);
+    const d = useToday ? today.getDate() : 1;
+    DICHO_DATE = `${nam}-${String(thang).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
+  const ngay = DICHO_DATE;
+  if (!DATA.diCho[ngay]) dichoInitDay(ngay);
+  const day = DATA.diCho[ngay];
+  _ensureFreeRows(day);
+  saveData();
+
+  setActions(`
+    <label class="small text-muted" style="margin:0 6px 0 0">Ngày</label>
+    <input type="date" id="dc-date" value="${ngay}" style="padding:6px 10px;border:1px solid var(--c-border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit">
+    <button class="btn-x" id="dc-reset" title="Reset SL các mặt hàng tiêu chuẩn về ĐL × QS">↻ Reset TC</button>
+    <button class="btn-x btn-p" id="dc-export" title="Xuất file Excel theo form Đi chợ ngày">⬇ Xuất Excel</button>
+  `);
+
+  // Tính per bữa
+  const calc = {};
+  ['S','T','C'].forEach(b => {
+    const mua = dichoTienBuaTC1(b);
+    const qs = +day[b].qs || 0;
+    const cong = qs * mua;
+    let chi = 0;
+    const rows = day[b].items.map((it, idx) => {
+      const mh = getMH(it.mhId);
+      const sl = dichoItemSL(it, qs, b);
+      const tt = dichoRowTien(it, sl, cong);
+      chi += tt;
+      const isPct = mh && mh.dvt === '%';
+      const isTC = mh && DICHO_TC_ITEMS.includes(mh.ma);
+      const dg = isPct ? (sl > 0 ? tt / sl : 0) : (mh ? dichoItemGia(it) : 0);
+      return { mh, it, idx, sl, tt, dg, isPct, isTC };
+    });
+    // Free-form rows
+    const freeRows = day[b].freeItems.map((it, idx) => {
+      const sl = +it.sl || 0;
+      const gia = +it.gia || 0;
+      const tt = (sl > 0 && gia > 0) ? roundMoney(sl * gia) : 0;
+      chi += tt;
+      return { it, idx, sl, gia, tt };
+    });
+    calc[b] = { mua, qs, cong, chi, rows, freeRows };
+  });
+
+  // Aggregate theo mặt hàng (TC by mhId; free by tên)
+  const agg = {};
+  ['S','T','C'].forEach(b => {
+    calc[b].rows.forEach(r => {
+      const k = 'mh-' + r.it.mhId;
+      if (!agg[k]) agg[k] = { ten: r.mh.ten + (r.isPct?' (%)':''), decimal: r.mh.decimal, isPct: r.isPct, sl:0, tt:0 };
+      agg[k].sl += +r.sl || 0;
+      agg[k].tt += r.tt;
+    });
+    calc[b].freeRows.forEach(r => {
+      const name = (r.it.ten || '').trim();
+      if (!name || r.sl <= 0) return;
+      const k = 'free-' + name.toLowerCase();
+      if (!agg[k]) agg[k] = { ten: name, decimal: 1, isPct: false, sl:0, tt:0 };
+      agg[k].sl += r.sl;
+      agg[k].tt += r.tt;
+    });
+  });
+  const aggList = Object.values(agg);
+  const tongAgg = aggList.reduce((s,x) => s + x.tt, 0);
+
+  const tongThuBua = calc.S.cong + calc.T.cong + calc.C.cong;
+  const tongAnThem = (+day.S.anThem||0) + (+day.T.anThem||0) + (+day.C.anThem||0);
+  const tongChi = calc.S.chi + calc.T.chi + calc.C.chi;
+
+  // Định mức TC theo ngày — tính kg cần + tiền ước từ DATA.dinhLuongChuan × QS × giá matHang
+  const qsNgay = Math.max(+calc.S.qs||0, +calc.T.qs||0, +calc.C.qs||0);
+  const dmList = (DATA.dinhLuongChuan || TC_DINH_LUONG_NGAY);
+  let dmTongTien = 0;
+  const dmRows = dmList.map(it => {
+    const mh = DATA.matHang.find(m => m.ma === it.mhMa);
+    if (it.nhom === 'pct') {
+      const tienGV = roundToUnit((+it.dl/100) * tongThuBua, 1000);
+      dmTongTien += tienGV;
+      return `<tr>
+        <td class="num">${it.stt}</td>
+        <td><strong>${it.ten}</strong></td>
+        <td><span class="code">${mh?mh.dvt:'%'}</span></td>
+        <td class="num">${it.dl}%</td>
+        <td class="num">${qsNgay}</td>
+        <td class="num text-muted">— ${it.dl}% × thu —</td>
+        <td class="num">${mh?fmt(mh.gia):'—'}</td>
+        <td class="num"><strong>${fmt(tienGV)}</strong></td>
+      </tr>`;
+    }
+    const kgCan = roundExcel((+it.dl * qsNgay) / 1000, mh?.decimal ?? 2);
+    const gia = mh ? +mh.gia || 0 : 0;
+    const tienUoc = roundMoney(kgCan * gia);
+    if (mh) dmTongTien += tienUoc;
+    return `<tr>
+      <td class="num">${it.stt}</td>
+      <td><strong>${it.ten}</strong></td>
+      <td><span class="code">${mh?mh.dvt:'?'}</span></td>
+      <td class="num">${it.dl}</td>
+      <td class="num">${qsNgay}</td>
+      <td class="num"><strong>${fmtN(kgCan, mh?.decimal ?? 2)}</strong></td>
+      <td class="num">${mh ? fmt(gia) : '<span class="text-muted">chưa có MH</span>'}</td>
+      <td class="num"><strong>${mh ? fmt(tienUoc) : '—'}</strong></td>
+    </tr>`;
+  }).join('');
+
+  const ttTruoc = 0; // chưa nối tháng trước trong demo
+  const tongThu = tongThuBua + tongAnThem + ttTruoc;
+  const ttNgay = tongThu - tongChi;
+
+  const buaCol = b => {
+    const data = calc[b];
+    const bName = b==='S'?'Sáng':b==='T'?'Trưa':'Chiều';
+    // TC items rows (auto SL, fixed giá hoặc % display)
+    const tcRowsHtml = data.rows.map(r => {
+      const slDec = r.isPct ? 2 : (r.mh.decimal ?? 1);
+      const giaCell = r.isPct
+        ? '<span class="text-muted small">—</span>'
+        : `<span title="Giá cố định từ Mặt hàng">${fmt(r.mh.gia)}</span>`;
+      const slCell = `<span class="dc-sl-auto" title="Tự tính: ${r.isPct?'mức %':'ĐL × QS = '+(TC_DINH_LUONG[r.mh.ma]?.dl[b==='S'?0:b==='T'?1:2]||'?')+' × '+data.qs}">${fmtN(+r.sl, slDec)}</span>`;
+      return `<tr class="dc-tc-row">
+        <td>${r.mh.ten}${r.isPct?' <span class="pill pill-m" style="font-size:9.5px;padding:0 5px">%</span>':''}</td>
+        <td class="num">${giaCell}</td>
+        <td class="num">${slCell}</td>
+        <td class="num"><strong>${fmt(r.tt)}</strong></td>
+      </tr>`;
+    }).join('');
+
+    // 20 dòng free-form (user tự nhập Tên / Giá / SL / auto Thành tiền)
+    const freeRowsHtml = data.freeRows.map(r => `<tr class="dc-free-row">
+        <td><input type="text" class="dc-free-ten" value="${(r.it.ten||'').replace(/"/g,'&quot;')}" data-bua="${b}" data-fidx="${r.idx}" placeholder="..."></td>
+        <td class="num"><input type="number" step="100" class="dc-free-gia" value="${r.gia || ''}" data-bua="${b}" data-fidx="${r.idx}" placeholder="0"></td>
+        <td class="num"><input type="number" step=".1" class="dc-free-sl" value="${r.sl || ''}" data-bua="${b}" data-fidx="${r.idx}" placeholder="0"></td>
+        <td class="num"><strong>${r.tt > 0 ? fmt(r.tt) : ''}</strong></td>
+      </tr>`).join('');
+
+    return `<div class="dc-col">
+      <div class="dc-col-head">${bName}</div>
+      <table class="dc-summary-tbl">
+        <thead><tr><th>QS</th><th>Mức ăn</th><th>Cộng</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><input type="number" value="${data.qs}" data-bua="${b}" class="dc-qs"></td>
+            <td class="num">${fmt(data.mua)}</td>
+            <td class="num"><strong>${fmt(data.cong)}</strong></td>
+          </tr>
+          <tr><td colspan="2" style="text-align:right;color:var(--c-muted);font-size:11px">Ăn thêm</td>
+              <td><input type="number" value="${+day[b].anThem||0}" data-bua="${b}" class="dc-anthem"></td></tr>
+          <tr style="background:#f8fafc"><td colspan="2" style="text-align:right;font-weight:600">Tổng</td>
+              <td class="num"><strong>${fmt(data.cong + (+day[b].anThem||0))}</strong></td></tr>
+        </tbody>
+      </table>
+      <table class="dc-items">
+        <thead><tr><th>Loại</th><th class="num">Giá</th><th class="num">SL</th><th class="num">Thành tiền</th></tr></thead>
+        <tbody>${tcRowsHtml}${freeRowsHtml}</tbody>
+        <tfoot><tr><td colspan="3">Cộng chi</td><td class="num"><strong>${fmt(data.chi)}</strong></td></tr></tfoot>
+      </table>
+    </div>`;
+  };
+
+  const aggHtml = aggList.map(x => {
+    const slDec = x.isPct ? 2 : (x.decimal ?? 1);
+    const dg = x.sl > 0 ? x.tt / x.sl : 0;
+    return `<tr>
+      <td>${x.ten}</td>
+      <td class="num">${fmtN(x.sl, slDec)}</td>
+      <td class="num"><strong>${fmt(x.tt)}</strong></td>
+      <td class="num text-muted">${fmtN(dg, 1)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('page-body').innerHTML = `
+    <div class="banner banner-i">
+      <span class="b-ico">⚡</span>
+      <div><strong>Đi chợ chia 3 bữa S/T/C.</strong> 9 mặt hàng <strong>tiêu chuẩn</strong> (gạo, vừng lạc, dầu, mắm, muối, mì chính, dầu diezen %, dầu rửa bát % = 1%, gia vị %): SL tự tính theo ĐL × QS bữa — đổi QS, SL tự cập nhật. Dưới có <strong>20 dòng trống</strong>/bữa cho bạn tự gõ Tên / Giá / SL của mặt hàng tươi (thịt/cá/rau), thành tiền nhân ra tự động.</div>
+    </div>
+    <div class="dc-grid">${['S','T','C'].map(buaCol).join('')}</div>
+
+    <div class="card-x" style="margin-top:18px">
+      <div class="card-x-head">
+        <h3>Định mức tiêu chuẩn theo ngày — gợi ý đi chợ (${qsNgay} người)</h3>
+        <span class="pill pill-i">Tổng ước: ${fmt(dmTongTien)} đ</span>
+      </div>
+      <div class="card-x-body p-0">
+        <table class="t t-compact"><thead><tr>
+          <th class="num">STT</th>
+          <th>Mặt hàng</th>
+          <th>ĐVT</th>
+          <th class="num">ĐL/người</th>
+          <th class="num">QS ngày</th>
+          <th class="num">Cần mua</th>
+          <th class="num">Giá (đ)</th>
+          <th class="num">Tiền ước (đ)</th>
+        </tr></thead><tbody>${dmRows}</tbody>
+        <tfoot><tr><td colspan="7" style="text-align:right"><strong>Tổng ước tính:</strong></td><td class="num"><strong>${fmt(dmTongTien)}</strong></td></tr></tfoot>
+        </table>
+      </div>
+      <div class="card-x-body" style="border-top:1px solid var(--c-border);padding:10px 16px;background:#f8fafc">
+        <div class="text-muted" style="font-size:12px">
+          <strong>Công thức:</strong> <span class="code">Cần mua (kg/lít) = ĐL × QS / 1000</span> · <span class="code">Tiền ước = Cần mua × Giá MH</span> · Gia vị: <span class="code">3% × Tổng thu (tròn nghìn)</span>.
+          QS ngày = max(QS S, QS T, QS C). Số liệu lấy từ <strong>Tab Tiêu chuẩn ăn</strong> (DATA.dinhLuongChuan).
+        </div>
+      </div>
+    </div>
+
+    <div class="card-x" style="margin-top:18px">
+      <div class="card-x-head"><h3>Bảng tổng kê — gộp 3 bữa (đối soát)</h3>
+        <span class="pill pill-i">Tổng ${fmt(tongAgg)} đ</span></div>
+      <div class="card-x-body p-0">
+        <table class="t t-compact"><thead><tr>
+          <th>Tên</th><th class="num">Số lượng</th><th class="num">Thành tiền (đ)</th><th class="num">ĐVT (đ)</th>
+        </tr></thead><tbody>${aggHtml || '<tr><td colspan="4" class="empty-state">Chưa có mặt hàng</td></tr>'}</tbody>
+        <tfoot><tr><td colspan="2"><strong>Tổng</strong></td><td class="num"><strong>${fmt(tongAgg)}</strong></td><td></td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="card-x">
+      <div class="card-x-head"><h3>Kết toán ngày ${ymdToDmy(ngay)}</h3></div>
+      <div class="card-x-body p-0">
+        <table class="t dc-summary-card">
+          <tr><td>Thu trong ngày (cộng 3 bữa = QS×TC1)</td><td class="num">${fmt(tongThuBua)}</td></tr>
+          <tr><td>Ăn thêm</td><td class="num">${fmt(tongAnThem)}</td></tr>
+          <tr><td>Thừa/thiếu hôm trước</td><td class="num">${fmt(ttTruoc)}</td></tr>
+          <tr class="tot"><td>Tổng thu</td><td class="num">${fmt(tongThu)}</td></tr>
+          <tr class="tot"><td>Tổng chi (cộng chi 3 bữa)</td><td class="num">${fmt(tongChi)}</td></tr>
+          <tr><td><strong>Thừa/thiếu trong ngày</strong></td><td class="num ${ttNgay<0?'neg':'pos'}"><strong>${fmt(ttNgay)}</strong></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <details class="fold"><summary>Xem công thức</summary>
+      <div class="formula"><span class="cmt"># Per bữa</span>
+Cộng        = QS × tiền_TC1_bữa            <span class="cmt"># Mức ăn: S=14400, T=28800, C=28800</span>
+Tổng        = Cộng + Ăn thêm
+<span class="cmt"># Per item</span>
+ĐVT ≠ %     → Thành tiền = ROUND(SL × Đơn giá, 0)
+ĐVT = %     → Thành tiền = ROUND(SL/100 × Cộng / 1000, 0) × 1000  <span class="cmt"># tròn nghìn</span>
+<span class="cmt"># Per ngày</span>
+Cộng chi    = Σ Thành tiền (3 bữa)
+Tổng thu    = Cộng 3 bữa + Ăn thêm + Thừa-thiếu hôm trước
+Thừa/thiếu  = Tổng thu − Tổng chi</div>
+    </details>
+  `;
+
+  // Wire
+  document.getElementById('dc-date').onchange = e => { DICHO_DATE = e.target.value; if (!DATA.diCho[DICHO_DATE]) dichoInitDay(DICHO_DATE); renderDiCho(); };
+  document.getElementById('dc-reset').onclick = () => window.dichoResetTC();
+  document.getElementById('dc-export').onclick = () => window.dichoExportExcel();
+  document.querySelectorAll('.dc-qs').forEach(inp => inp.onchange = e => {
+    const b = e.target.dataset.bua;
+    DATA.diCho[ngay][b].qs = +e.target.value || 0;
+    saveData(); renderDiCho();
+  });
+  document.querySelectorAll('.dc-anthem').forEach(inp => inp.onchange = e => {
+    const b = e.target.dataset.bua;
+    DATA.diCho[ngay][b].anThem = +e.target.value || 0;
+    saveData(); renderDiCho();
+  });
+  // Free-form rows: nhập tên / SL / giá tự do, auto nhân
+  document.querySelectorAll('.dc-free-ten').forEach(inp => inp.onchange = e => {
+    const b = e.target.dataset.bua; const idx = +e.target.dataset.fidx;
+    DATA.diCho[ngay][b].freeItems[idx].ten = e.target.value;
+    saveData(); renderDiCho();
+  });
+  document.querySelectorAll('.dc-free-sl').forEach(inp => inp.onchange = e => {
+    const b = e.target.dataset.bua; const idx = +e.target.dataset.fidx;
+    DATA.diCho[ngay][b].freeItems[idx].sl = +e.target.value || 0;
+    saveData(); renderDiCho();
+  });
+  document.querySelectorAll('.dc-free-gia').forEach(inp => inp.onchange = e => {
+    const b = e.target.dataset.bua; const idx = +e.target.dataset.fidx;
+    DATA.diCho[ngay][b].freeItems[idx].gia = +e.target.value || 0;
+    saveData(); renderDiCho();
+  });
+}
+
+window.dichoResetTC = function() {
+  if (!confirm('Đặt lại SL các mặt hàng tiêu chuẩn (gạo, mắm, muối, mì chính, dầu, vừng lạc, dầu diezen %, dầu RB %, gia vị %) về ĐL × QS bữa?\nMặt hàng tươi (thịt, cá, rau...) bạn thêm sẽ giữ lại.')) return;
+  const ngay = DICHO_DATE;
+  const day = DATA.diCho[ngay];
+  if (!day) return;
+  ['S','T','C'].forEach(b => {
+    const qs = +day[b].qs || 0;
+    const keep = day[b].items.filter(it => {
+      const mh = getMH(it.mhId);
+      return mh && !DICHO_TC_ITEMS.includes(mh.ma);
+    });
+    const tcItems = DICHO_TC_ITEMS.map(ma => {
+      const mh = DATA.matHang.find(m => m.ma === ma);
+      return mh ? { mhId: mh.id, sl: dichoDefaultSL(ma, qs, b) } : null;
+    }).filter(Boolean);
+    day[b].items = [...tcItems, ...keep];
+  });
+  saveData(); renderDiCho();
+};
+
+window.dichoAddItem = function(bua) {
+  const ngay = DICHO_DATE;
+  const sel = document.getElementById('dc-add-mh-' + bua);
+  const slInp = document.getElementById('dc-add-sl-' + bua);
+  if (!sel || !sel.value) { alert('Hết mặt hàng để chọn'); return; }
+
+  let mhId, isNew = false;
+  if (sel.value === '__new__') {
+    const ten = (prompt('Tên mặt hàng mới (VD: Tôm sú, Bí xanh, Chả cá…):', '') || '').trim();
+    if (!ten) return;
+    const dvt = (prompt('Đơn vị tính (Kg, Lít, Quả, Cái, Bó, %…):', 'Kg') || '').trim();
+    if (!dvt) return;
+    let gia = 0;
+    if (dvt !== '%') {
+      const giaStr = prompt('Đơn giá (đ) — vẫn sửa lại được ở từng dòng sau:', '0');
+      if (giaStr === null) return;
+      gia = +giaStr || 0;
+    }
+    const nhomMap = { '%':'GV', 'Kg':'TUOI', 'Lít':'TUOI', 'Quả':'TUOI', 'Cái':'TUOI', 'Bó':'TUOI' };
+    const newMH = {
+      id: nextId(DATA.matHang),
+      ma: 'MH' + String(nextId(DATA.matHang)).padStart(3,'0'),
+      ten,
+      nhom: nhomMap[dvt] || 'TUOI',
+      dvt,
+      gia,
+      isTC: false,
+      decimal: dvt === '%' ? 2 : (gia >= 10000 ? 2 : 1),
+    };
+    DATA.matHang.push(newMH);
+    saveData();         // Lưu danh mục NGAY, không phụ thuộc SL
+    mhId = newMH.id;
+    isNew = true;
+  } else {
+    mhId = +sel.value;
+  }
+
+  const sl = +slInp.value || 0;
+  if (sl > 0) {
+    DATA.diCho[ngay][bua].items.push({ mhId, sl });
+    saveData();
+    renderDiCho();
+  } else if (isNew) {
+    // MH đã lưu vào catalog. Refresh để dropdown hiện. Không bắt nhập SL ngay.
+    renderDiCho();
+    const mh = getMH(mhId);
+    alert(`✓ Đã thêm "${mh.ten}" vào danh mục mặt hàng.\nGiờ chọn từ dropdown (bữa nào cũng được) + nhập SL → bấm ＋ để dùng.\nNhớ vào tab Mặt hàng → ⬇ Xuất CSV để lưu cho lần sau.`);
+  } else {
+    alert('Nhập SL > 0 trước khi bấm ＋'); slInp.focus();
+  }
+};
+
+window.dichoDelItem = function(bua, idx) {
+  const it = DATA.diCho[DICHO_DATE][bua].items[idx];
+  const mh = getMH(it.mhId);
+  if (!confirm(`Xoá "${mh?.ten || '?'}" khỏi bữa ${bua==='S'?'Sáng':bua==='T'?'Trưa':'Chiều'}?`)) return;
+  DATA.diCho[DICHO_DATE][bua].items.splice(idx, 1);
+  saveData(); renderDiCho();
+};
+
+window.dichoImport = function() {
+  const ngay = DICHO_DATE;
+  const day = DATA.diCho[ngay];
+  if (!day) { alert('Chưa có dữ liệu Đi chợ'); return; }
+  const agg = {};
+  ['S','T','C'].forEach(b => {
+    const qs = +day[b].qs || 0;
+    const cong = qs * dichoTienBuaTC1(b);
+    day[b].items.forEach(it => {
+      const sl = dichoItemSL(it, qs, b);
+      const tt = dichoRowTien(it, sl, cong);
+      if (!agg[it.mhId]) agg[it.mhId] = { sl:0, tt:0 };
+      agg[it.mhId].sl += sl;
+      agg[it.mhId].tt += tt;
+    });
+  });
+  const keys = Object.keys(agg).filter(k => agg[k].sl > 0);
+  if (keys.length === 0) { alert('Không có mặt hàng nào để import'); return; }
+  const maPhieu = `DC${ngay.slice(5).replace('-','')}`;
+  const existed = DATA.nhapTrongNgay.filter(g => g.ngay === ngay && g.maPhieu === maPhieu).length;
+  if (existed > 0 && !confirm(`Đã có ${existed} dòng nhập mã ${maPhieu} cho ngày này. Ghi đè?`)) return;
+  DATA.nhapTrongNgay = DATA.nhapTrongNgay.filter(g => !(g.ngay === ngay && g.maPhieu === maPhieu));
+  keys.forEach(mhId => {
+    const { sl, tt } = agg[mhId];
+    const donGia = sl > 0 ? tt / sl : 0;
+    DATA.nhapTrongNgay.push({
+      id: nextId(DATA.nhapTrongNgay),
+      ngay, maPhieu,
+      mhId: +mhId,
+      soLuong: roundExcel(sl, 4),
+      donGia: roundMoney(donGia),
+      thanhTien: roundMoney(tt),
+      ghiChu: 'Import từ Đi chợ',
+    });
+  });
+  saveData();
+  alert(`Đã import ${keys.length} mặt hàng (mã phiếu ${maPhieu}) sang Nhập trong ngày.`);
+};
+
+window.dichoExportExcel = function() {
+  if (typeof XLSX === 'undefined') { alert('Thư viện Excel chưa load xong. Đợi 1-2 giây rồi bấm lại.'); return; }
+  const ngay = DICHO_DATE;
+  const day = DATA.diCho[ngay];
+  if (!day) { alert('Chưa có dữ liệu Đi chợ ngày này'); return; }
+
+  // Tính per bữa (giống renderDiCho)
+  _ensureFreeRows(day);
+  const calc = {};
+  ['S','T','C'].forEach(b => {
+    const mua = dichoTienBuaTC1(b);
+    const qs = +day[b].qs || 0;
+    const cong = qs * mua;
+    let chi = 0;
+    const rows = day[b].items.map(it => {
+      const mh = getMH(it.mhId);
+      const sl = dichoItemSL(it, qs, b);
+      const tt = dichoRowTien(it, sl, cong);
+      chi += tt;
+      const isPct = mh && mh.dvt === '%';
+      const dg = isPct ? (sl > 0 ? tt/sl : 0) : (mh ? dichoItemGia(it) : 0);
+      return { mh, sl, tt, dg, isPct };
+    });
+    const freeRows = day[b].freeItems
+      .filter(it => (it.ten||'').trim() && +it.sl > 0)
+      .map(it => {
+        const sl = +it.sl || 0, gia = +it.gia || 0;
+        const tt = roundMoney(sl * gia);
+        chi += tt;
+        return { ten: it.ten, sl, gia, tt };
+      });
+    calc[b] = { mua, qs, cong, chi, rows, freeRows };
+  });
+  const agg = {};
+  ['S','T','C'].forEach(b => {
+    calc[b].rows.forEach(r => {
+      if (!r.mh) return;
+      const k = 'mh-' + r.mh.id;
+      if (!agg[k]) agg[k] = { ten: r.mh.ten + (r.mh.dvt==='%'?' (%)':''), sl:0, tt:0 };
+      agg[k].sl += r.sl;
+      agg[k].tt += r.tt;
+    });
+    calc[b].freeRows.forEach(r => {
+      const k = 'free-' + r.ten.toLowerCase();
+      if (!agg[k]) agg[k] = { ten: r.ten, sl:0, tt:0 };
+      agg[k].sl += r.sl;
+      agg[k].tt += r.tt;
+    });
+  });
+  const aggList = Object.values(agg);
+  const tongAgg = aggList.reduce((s,x) => s + x.tt, 0);
+  const tongThuBua = calc.S.cong + calc.T.cong + calc.C.cong;
+  const tongAnThem = (+day.S.anThem||0) + (+day.T.anThem||0) + (+day.C.anThem||0);
+  const tongChi = calc.S.chi + calc.T.chi + calc.C.chi;
+  const ttTruoc = 0;
+  const tongThu = tongThuBua + tongAnThem + ttTruoc;
+  const ttNgay = tongThu - tongChi;
+
+  // Cột layout: 0-3 Sáng | 4 gap | 5-8 Trưa | 9 gap | 10-13 Chiều | 14 gap | 15-18 Agg
+  const W = 19;
+  const aoa = [];
+  let aggIdx = 0;
+  const pickAgg = () => {
+    if (aggIdx >= aggList.length) return {};
+    const a = aggList[aggIdx++];
+    return {
+      15: a.ten,
+      16: a.sl,
+      17: a.tt,
+      18: a.sl > 0 ? a.tt / a.sl : 0,
+    };
+  };
+  const pushRow = (vals = {}) => {
+    const r = Array(W).fill('');
+    Object.entries(vals).forEach(([k,v]) => { r[+k] = v; });
+    aoa.push(r);
+  };
+
+  // Tiêu đề
+  pushRow({ 0:`ĐI CHỢ NGÀY ${ymdToDmy(ngay)} — ${DATA.cauHinh.donVi}` });
+  pushRow();
+
+  // Header bữa (row 2)
+  pushRow({ 0:'Sáng', 5:'Trưa', 10:'Chiều', 15:'Bảng tổng kê (gộp 3 bữa)' });
+
+  // QS/Mức ăn/Cộng headers + agg header (row 3)
+  pushRow({
+    0:'QS',1:'Mức ăn',2:'Cộng',
+    5:'QS',6:'Mức ăn',7:'Cộng',
+    10:'QS',11:'Mức ăn',12:'Cộng',
+    15:'Tên', 16:'Số lượng', 17:'Thành tiền', 18:'Đơn giá',
+  });
+
+  // QS values
+  pushRow({
+    0: calc.S.qs, 1: calc.S.mua, 2: calc.S.cong,
+    5: calc.T.qs, 6: calc.T.mua, 7: calc.T.cong,
+    10: calc.C.qs, 11: calc.C.mua, 12: calc.C.cong,
+    ...pickAgg(),
+  });
+
+  // Ăn thêm
+  pushRow({
+    0:'Ăn thêm', 2:+day.S.anThem||0,
+    5:'Ăn thêm', 7:+day.T.anThem||0,
+    10:'Ăn thêm', 12:+day.C.anThem||0,
+    ...pickAgg(),
+  });
+
+  // Tổng
+  pushRow({
+    0:'Tổng', 2: calc.S.cong + (+day.S.anThem||0),
+    5:'Tổng', 7: calc.T.cong + (+day.T.anThem||0),
+    10:'Tổng', 12: calc.C.cong + (+day.C.anThem||0),
+    ...pickAgg(),
+  });
+
+  // Loại/Giá/SL/ThànhTiền headers
+  pushRow({
+    0:'Loại',1:'Giá',2:'SL',3:'Thành tiền',
+    5:'Loại',6:'Giá',7:'SL',8:'Thành tiền',
+    10:'Loại',11:'Giá',12:'SL',13:'Thành tiền',
+    ...pickAgg(),
+  });
+
+  // Items rows: TC items trước, free items sau (chỉ những dòng đã điền)
+  const buaAll = b => {
+    const tc = (calc[b].rows || []).map(it => ({
+      ten: it.mh ? it.mh.ten + (it.isPct?' (%)':'') : '',
+      gia: it.isPct ? '' : it.dg,
+      sl: it.sl, tt: it.tt,
+    }));
+    const free = (calc[b].freeRows || []).map(it => ({
+      ten: it.ten, gia: it.gia, sl: it.sl, tt: it.tt,
+    }));
+    return [...tc, ...free];
+  };
+  const allS = buaAll('S'), allT = buaAll('T'), allC = buaAll('C');
+  const maxItems = Math.max(allS.length, allT.length, allC.length);
+  for (let i = 0; i < maxItems; i++) {
+    const r = {};
+    [[allS, 0], [allT, 5], [allC, 10]].forEach(([arr, off]) => {
+      const it = arr[i];
+      if (it && it.ten) {
+        r[off]   = it.ten;
+        r[off+1] = it.gia;
+        r[off+2] = it.sl;
+        r[off+3] = it.tt;
+      }
+    });
+    Object.assign(r, pickAgg());
+    pushRow(r);
+  }
+
+  // Cộng chi
+  pushRow({
+    0:'Cộng chi', 3: calc.S.chi,
+    5:'Cộng chi', 8: calc.T.chi,
+    10:'Cộng chi', 13: calc.C.chi,
+    ...pickAgg(),
+  });
+
+  // Nếu agg còn nhiều hơn → đẩy tiếp xuống cột phải
+  while (aggIdx < aggList.length) pushRow(pickAgg());
+
+  // Khoảng trống + Day summary
+  pushRow();
+  pushRow({ 0:'Thu trong ngày', 3: tongThuBua });
+  pushRow({ 0:'Ăn thêm', 3: tongAnThem });
+  pushRow({ 0:'Bù giá gạo', 3: 0 });
+  pushRow({ 0:'Thừa/thiếu hôm trước', 3: ttTruoc });
+  pushRow({ 0:'Tổng thu', 3: tongThu });
+  pushRow({ 0:'Tổng chi', 3: tongChi });
+  pushRow({ 0:'Thừa/thiếu trong ngày', 3: ttNgay });
+
+  // Footer aggregate
+  pushRow({ 16:'Tổng nhóm', 17: tongAgg });
+  pushRow({ 16:'Tổng', 17: tongAgg });
+
+  // Build sheet
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // Column widths
+  ws['!cols'] = [
+    {wch:18},{wch:9},{wch:8},{wch:12}, {wch:2},
+    {wch:18},{wch:9},{wch:8},{wch:12}, {wch:2},
+    {wch:18},{wch:9},{wch:8},{wch:12}, {wch:2},
+    {wch:22},{wch:10},{wch:14},{wch:12},
+  ];
+
+  // Number format cho cột tiền + SL
+  const moneyFmt = '#,##0';
+  const slFmt = '#,##0.00';
+  const setFmt = (r, c, fmt) => {
+    const ref = XLSX.utils.encode_cell({ r, c });
+    if (ws[ref] && typeof ws[ref].v === 'number') ws[ref].z = fmt;
+  };
+  for (let r = 0; r < aoa.length; r++) {
+    [1,2,3, 6,7,8, 11,12,13, 17,18].forEach(c => setFmt(r, c, moneyFmt));
+    [16].forEach(c => setFmt(r, c, slFmt));
+    // SL cột 2/7/12 ở rows items dùng decimal — overwrite money fmt
+    [2,7,12].forEach(c => {
+      const ref = XLSX.utils.encode_cell({ r, c });
+      if (ws[ref] && typeof ws[ref].v === 'number' && ws[ref].v !== 0 && ws[ref].v < 1000) {
+        ws[ref].z = slFmt;
+      }
+    });
+  }
+
+  // Merges
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:0,c:18}}, // Title
+    {s:{r:2,c:0}, e:{r:2,c:2}},   // "Sáng"
+    {s:{r:2,c:5}, e:{r:2,c:7}},   // "Trưa"
+    {s:{r:2,c:10}, e:{r:2,c:12}}, // "Chiều"
+    {s:{r:2,c:15}, e:{r:2,c:18}}, // "Bảng tổng kê"
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Đi chợ');
+  XLSX.writeFile(wb, `DiCho_${ngay}.xlsx`);
+};
+
+function renderBangKe() {
+  setSubtitle('Bảng kê mua hàng (Mẫu C24-HD) — gộp từ "Nhập trong ngày" theo mã phiếu');
+  // Group nhập trong ngày by mã phiếu
+  const groups = {};
+  DATA.nhapTrongNgay.forEach(g => {
+    if (!groups[g.maPhieu]) groups[g.maPhieu] = [];
+    groups[g.maPhieu].push(g);
+  });
+  const html = Object.keys(groups).length === 0 ? `<div class="empty-state"><div class="b-ico">▤</div>Chưa có giao dịch nhập nào. Vào "Nhập trong ngày" để nhập.</div>`
+    : Object.keys(groups).sort().map(maPhieu => {
+      const items = groups[maPhieu];
+      const tong = items.reduce((s, x) => s + (+x.thanhTien || 0), 0);
+      return `<div class="card-x">
+        <div class="card-x-head">
+          <div><h3>Bảng kê ${maPhieu}</h3><div class="text-muted small">Ngày ${ymdToDmy(items[0].ngay)}</div></div>
+          <span class="pill pill-i">Tổng ${fmt(tong)} đ</span>
+        </div>
+        <div class="card-x-body p-0">
+          <table class="t t-compact"><thead><tr>
+            <th class="num">STT</th><th>Mặt hàng</th><th>ĐVT</th>
+            <th class="num">SL</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th><th>Ghi chú</th>
+          </tr></thead><tbody>${items.map((x, i) => {
+            const mh = getMH(x.mhId);
+            return `<tr>
+              <td class="num">${i+1}</td><td>${mh?.ten || '?'}</td><td>${mh?.dvt || ''}</td>
+              <td class="num">${fmtN(+x.soLuong, mh?.decimal || 1)}</td>
+              <td class="num">${fmt(+x.donGia)}</td>
+              <td class="num"><strong>${fmt(+x.thanhTien)}</strong></td>
+              <td class="small text-muted">${x.ghiChu || ''}</td>
+            </tr>`;
+          }).join('')}</tbody></table>
+        </div>
+      </div>`;
+    }).join('');
+  document.getElementById('page-body').innerHTML = html;
+}
+
+// ============================================================
+// SECTION: NHAP TRONG NGAY (input)
+// ============================================================
+function renderNhapTrongNgay() {
+  setSubtitle('Nhập từng giao dịch tiếp phẩm — Thành tiền = ROUND(SL × Đơn giá, 0)');
+  setActions(`<button class="btn-x btn-p" onclick="window.editNTN(null)">＋ Thêm giao dịch</button>`);
+  const rows = DATA.nhapTrongNgay.length === 0 ? '<tr><td colspan="8" class="empty-state"><div class="b-ico">⇣</div>Chưa có giao dịch nào</td></tr>'
+    : DATA.nhapTrongNgay.map(g => {
+      const mh = getMH(g.mhId);
+      return `<tr>
+        <td>${ymdToDmy(g.ngay)}</td>
+        <td><span class="code">${g.maPhieu}</span></td>
+        <td><strong>${mh?.ten || '?'}</strong></td>
+        <td>${mh?.dvt || ''}</td>
+        <td class="num">${fmtN(+g.soLuong, mh?.decimal || 1)}</td>
+        <td class="num">${fmt(+g.donGia)}</td>
+        <td class="num"><strong>${fmt(+g.thanhTien)}</strong></td>
+        <td class="row-action">
+          <button class="btn-x btn-x-sm" onclick="window.editNTN(${g.id})">Sửa</button>
+          <button class="btn-x btn-x-sm btn-d" onclick="window.delNTN(${g.id})">Xoá</button>
+        </td>
+      </tr>`;
+    }).join('');
+  document.getElementById('page-body').innerHTML = `<div class="card-x"><div class="card-x-body p-0">
+    <table class="t"><thead><tr>
+      <th>Ngày</th><th>Mã phiếu</th><th>Mặt hàng</th><th>ĐVT</th>
+      <th class="num">Số lượng</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>
+  </div></div>`;
+}
+window.editNTN = function(id) {
+  const g = id ? DATA.nhapTrongNgay.find(x => x.id === id) : { ngay:'', maPhieu:'N01', mhId:null, soLuong:0, donGia:0, ghiChu:'' };
+  document.getElementById('ntn-id').value = id || '';
+  document.getElementById('ntn-ngay').value = g.ngay || new Date().toISOString().slice(0,10);
+  document.getElementById('ntn-phieu').value = g.maPhieu;
+  document.getElementById('ntn-sl').value = g.soLuong;
+  document.getElementById('ntn-gia').value = g.donGia;
+  document.getElementById('ntn-tt').value = roundMoney((+g.soLuong) * (+g.donGia));
+  document.getElementById('ntn-gc').value = g.ghiChu || '';
+  document.getElementById('ntn-mh').innerHTML = DATA.matHang.map(mh => `<option value="${mh.id}" ${mh.id===g.mhId?'selected':''}>${mh.ten} (${mh.dvt})</option>`).join('');
+  const upd = () => {
+    const sl = +document.getElementById('ntn-sl').value || 0;
+    const gia = +document.getElementById('ntn-gia').value || 0;
+    document.getElementById('ntn-tt').value = roundMoney(sl * gia);
+  };
+  document.getElementById('ntn-sl').oninput = upd;
+  document.getElementById('ntn-gia').oninput = upd;
+  bootstrap.Modal.getOrCreateInstance('#m-ntn').show();
+};
+window.delNTN = function(id) {
+  if (!confirm('Xoá giao dịch này?')) return;
+  DATA.nhapTrongNgay = DATA.nhapTrongNgay.filter(x => x.id !== id);
+  saveData(); renderNhapTrongNgay();
+};
+document.getElementById('ntn-save').onclick = () => {
+  const id = +document.getElementById('ntn-id').value || null;
+  const obj = {
+    ngay: document.getElementById('ntn-ngay').value,
+    maPhieu: document.getElementById('ntn-phieu').value.trim(),
+    mhId: +document.getElementById('ntn-mh').value,
+    soLuong: +document.getElementById('ntn-sl').value || 0,
+    donGia: +document.getElementById('ntn-gia').value || 0,
+    ghiChu: document.getElementById('ntn-gc').value,
+  };
+  obj.thanhTien = roundMoney(obj.soLuong * obj.donGia);
+  if (!obj.ngay || !obj.maPhieu) { alert('Cần ngày và mã phiếu'); return; }
+  if (id) Object.assign(DATA.nhapTrongNgay.find(x => x.id === id), obj);
+  else DATA.nhapTrongNgay.push({ id: nextId(DATA.nhapTrongNgay), ...obj });
+  saveData(); renderNhapTrongNgay();
+  bootstrap.Modal.getInstance('#m-ntn').hide();
+};
+
+// ============================================================
+// SECTION: PHIEU NHAP (auto)
+// ============================================================
+let PNHAP_DATE = null; // '' = tất cả
+function renderPhieuNhap() {
+  setSubtitle('Tự sinh từ Đi chợ — mỗi ngày = 1 phiếu DC{MMDD}. Plus phiếu nhập tay (nếu có ở "Nhập trong ngày").');
+
+  // 1) Synth phiếu từ Đi chợ
+  const groups = {};
+  Object.keys(DATA.diCho || {}).forEach(ngay => {
+    const day = DATA.diCho[ngay];
+    if (!day) return;
+    const agg = {};
+    ['S','T','C'].forEach(b => {
+      const qs = +day[b].qs || 0;
+      const cong = qs * dichoTienBuaTC1(b);
+      (day[b].items || []).forEach(it => {
+        const mh = getMH(it.mhId);
+        if (!mh) return;
+        const sl = dichoItemSL(it, qs, b);
+        const tt = dichoRowTien(it, sl, cong);
+        if (!agg[it.mhId]) agg[it.mhId] = { mhId: it.mhId, sl:0, tt:0 };
+        agg[it.mhId].sl += sl;
+        agg[it.mhId].tt += tt;
+      });
+    });
+    const items = Object.values(agg).filter(x => x.sl > 0).map(x => ({
+      ngay, mhId: x.mhId, soLuong: x.sl,
+      donGia: x.sl > 0 ? x.tt / x.sl : 0,
+      thanhTien: x.tt,
+    }));
+    if (items.length === 0) return;
+    const maPhieu = `DC${ngay.slice(5).replace('-','')}`;
+    groups[maPhieu] = { ngay, items, isDC: true };
+  });
+
+  // 2) Manual entries từ DATA.nhapTrongNgay (non-DC)
+  DATA.nhapTrongNgay.forEach(g => {
+    if (g.maPhieu && /^DC/.test(g.maPhieu)) return;
+    if (!groups[g.maPhieu]) groups[g.maPhieu] = { ngay: g.ngay, items: [], isDC: false };
+    groups[g.maPhieu].items.push({ ngay: g.ngay, mhId: g.mhId, soLuong: g.soLuong, donGia: g.donGia, thanhTien: g.thanhTien });
+  });
+
+  // 3) Filter theo ngày nếu user chọn
+  const allKeys = Object.keys(groups).sort((a,b) => groups[a].ngay.localeCompare(groups[b].ngay));
+  const filtered = PNHAP_DATE ? allKeys.filter(k => groups[k].ngay === PNHAP_DATE) : allKeys;
+
+  // Build date options
+  const allDates = [...new Set(allKeys.map(k => groups[k].ngay))].sort();
+  const dateOpts = `<option value="">— Tất cả (${allKeys.length} phiếu) —</option>` +
+    allDates.map(d => `<option value="${d}" ${PNHAP_DATE===d?'selected':''}>${ymdToDmy(d)}</option>`).join('');
+
+  setActions(`
+    <label class="small text-muted" style="margin:0 6px 0 0">Ngày</label>
+    <select id="pnhap-date" style="padding:6px 10px;border:1px solid var(--c-border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit">${dateOpts}</select>
+  `);
+
+  if (filtered.length === 0) {
+    document.getElementById('page-body').innerHTML = `<div class="empty-state"><div class="b-ico">⇩</div>${PNHAP_DATE ? `Không có phiếu nhập ngày ${ymdToDmy(PNHAP_DATE)}` : 'Chưa có phiếu nhập. Vào tab <strong>Đi chợ</strong> nhập theo ngày — phiếu tự sinh.'}</div>`;
+    document.getElementById('pnhap-date').onchange = e => { PNHAP_DATE = e.target.value; renderPhieuNhap(); };
+    return;
+  }
+
+  const html = filtered.map(maPhieu => {
+    const { ngay, items, isDC } = groups[maPhieu];
+    const tong = items.reduce((s, x) => s + (+x.thanhTien || 0), 0);
+    return `<div class="card-x">
+      <div class="card-x-head">
+        <div><h3>PHIẾU NHẬP KHO — ${maPhieu} ${isDC?'<span class="pill pill-s" style="font-size:10px">auto từ Đi chợ</span>':'<span class="pill pill-m" style="font-size:10px">nhập tay</span>'}</h3>
+          <div class="text-muted small">Ngày ${ymdToDmy(ngay)} · ${items.length} dòng</div></div>
+        <span class="pill pill-i">Tổng ${fmt(Math.round(tong))} đ</span>
+      </div>
+      <div class="card-x-body">
+        <div class="fx-row" style="margin-bottom:14px">
+          <div class="text-muted small">Đơn vị: <strong>${DATA.cauHinh.donVi}</strong></div>
+          <div class="text-muted small">Tiếp phẩm: <strong>${DATA.cauHinh.tiepPham}</strong></div>
+          <div class="text-muted small">Thủ kho: <strong>${DATA.cauHinh.thuKho}</strong></div>
+        </div>
+        <table class="t t-compact"><thead><tr>
+          <th class="num">STT</th><th>Mặt hàng</th><th>ĐVT</th>
+          <th class="num">SL</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th>
+        </tr></thead><tbody>${items.map((x, i) => {
+          const mh = getMH(x.mhId);
+          return `<tr>
+            <td class="num">${i+1}</td><td><strong>${mh?.ten || '?'}</strong></td><td>${mh?.dvt || ''}</td>
+            <td class="num">${fmtN(+x.soLuong, mh?.decimal ?? 1)}</td>
+            <td class="num">${fmt(Math.round(+x.donGia))}</td>
+            <td class="num"><strong>${fmt(Math.round(+x.thanhTien))}</strong></td>
+          </tr>`;
+        }).join('')}</tbody>
+        <tfoot><tr><td colspan="5"><strong>Tổng cộng</strong></td><td class="num"><strong>${fmt(Math.round(tong))}</strong></td></tr></tfoot></table>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('page-body').innerHTML = html;
+  document.getElementById('pnhap-date').onchange = e => { PNHAP_DATE = e.target.value; renderPhieuNhap(); };
+}
+
+// ============================================================
+// SECTION: PHIEU XUAT (auto - tu thuc đơn × quân số)
+// ============================================================
+let PXUAT_DAY = null; // null = tất cả, number = ngày trong tháng
+function renderPhieuXuat() {
+  setSubtitle('Tự sinh: TC kg/L = ROUND(ĐL_TC × QS Chấm cơm, n). Tươi = SL Đi chợ 3 bữa. ĐVT % bỏ qua. 1 phiếu/ngày, mã Px01, Px02…');
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  const ngayMax = dim(thang, nam);
+
+  const days = [];
+  for (let d = 1; d <= ngayMax; d++) {
+    const items = [];
+    DATA.matHang.forEach(mh => {
+      const xt = xuatKhoNgay(mh.id, d);
+      if (xt > 0) items.push({ mh, sl: xt, tien: xt * mh.gia });
+    });
+    if (items.length > 0) days.push({ d, items });
+  }
+
+  const dayOpts = `<option value="">— Tất cả (${days.length} phiếu) —</option>` +
+    days.map(({d}) => `<option value="${d}" ${PXUAT_DAY===d?'selected':''}>${String(d).padStart(2,'0')}/${String(thang).padStart(2,'0')}/${nam}</option>`).join('');
+  setActions(`
+    <label class="small text-muted" style="margin:0 6px 0 0">Ngày</label>
+    <select id="pxuat-day" style="padding:6px 10px;border:1px solid var(--c-border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit">${dayOpts}</select>
+  `);
+
+  const visible = PXUAT_DAY ? days.filter(x => x.d === PXUAT_DAY) : days;
+
+  if (days.length === 0) {
+    document.getElementById('page-body').innerHTML = `<div class="empty-state"><div class="b-ico">⇧</div>Chưa có xuất kho nào.<br><span class="small">Để có xuất TC (gạo, mắm…): cần <strong>Chấm cơm</strong> (vào tab Chấm cơm bấm "Chấm hết").<br>Để có xuất tươi (thịt, cá…): cần nhập <strong>Đi chợ</strong> theo ngày.</span></div>`;
+    document.getElementById('pxuat-day').onchange = e => { PXUAT_DAY = +e.target.value || null; renderPhieuXuat(); };
+    return;
+  }
+  const html = visible.map(({ d, items }) => {
+    const tong = items.reduce((s, x) => s + x.tien, 0);
+    return `<div class="card-x">
+      <div class="card-x-head">
+        <div><h3>PHIẾU XUẤT KHO — Px${String(d).padStart(2,'0')}</h3>
+          <div class="text-muted small">Ngày ${String(d).padStart(2,'0')}/${String(thang).padStart(2,'0')}/${nam} · ${items.length} mặt hàng</div></div>
+        <span class="pill pill-w">Tổng giá trị ${fmt(Math.round(tong))} đ</span>
+      </div>
+      <div class="card-x-body">
+        <table class="t t-compact"><thead><tr>
+          <th class="num">STT</th><th>Mặt hàng</th><th>ĐVT</th>
+          <th class="num">SL xuất</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th>
+        </tr></thead><tbody>${items.map((x, i) => `<tr>
+          <td class="num">${i+1}</td><td><strong>${x.mh.ten}</strong></td><td>${x.mh.dvt}</td>
+          <td class="num">${fmtN(x.sl, x.mh.decimal)}</td>
+          <td class="num">${fmt(x.mh.gia)}</td>
+          <td class="num"><strong>${fmt(Math.round(x.tien))}</strong></td>
+        </tr>`).join('')}</tbody>
+        <tfoot><tr><td colspan="5"><strong>Tổng cộng</strong></td><td class="num"><strong>${fmt(Math.round(tong))}</strong></td></tr></tfoot></table>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('page-body').innerHTML = html || `<div class="empty-state">Không có xuất ngày ${PXUAT_DAY?String(PXUAT_DAY).padStart(2,'0')+'/'+String(thang).padStart(2,'0'):''}</div>`;
+  document.getElementById('pxuat-day').onchange = e => { PXUAT_DAY = +e.target.value || null; renderPhieuXuat(); };
+}
+
+// ============================================================
+// SECTION: TON KHO (auto)
+// ============================================================
+let TONKHO_SHOW_ALL = false;
+function renderTonKho() {
+  setSubtitle('Theo dõi tồn kho từng mặt hàng × từng ngày. Tồn cuối = Tồn đầu + Nhập − Xuất. ĐVT % bỏ qua (chỉ là khoản chi).');
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  const ngayMax = dim(thang, nam);
+
+  // Precompute nhập/xuất/tồn cho mỗi mặt hàng × ngày trong tháng
+  const allItems = DATA.matHang.filter(m => m.dvt !== '%');
+  const grid = {}, active = new Set();
+  allItems.forEach(mh => {
+    let ton = 0;
+    const g = { nh:[], xt:[], ton:[] };
+    for (let d = 1; d <= ngayMax; d++) {
+      const nh = nhapKhoNgay(mh.id, d);
+      const xt = xuatKhoNgay(mh.id, d);
+      ton = ton + nh - xt;
+      g.nh[d] = nh; g.xt[d] = xt; g.ton[d] = ton;
+      if (nh > 0 || xt > 0) active.add(mh.id);
+    }
+    grid[mh.id] = g;
+  });
+  // Hiển: TC luôn + tươi có hoạt động (hoặc tất cả nếu user bấm Show all)
+  const display = TONKHO_SHOW_ALL
+    ? allItems
+    : allItems.filter(mh => mh.isTC || active.has(mh.id));
+
+  setActions(`
+    <span class="small text-muted">${display.length}/${allItems.length} mặt hàng</span>
+    <button class="btn-x" id="tk-toggle">${TONKHO_SHOW_ALL ? '👁 Chỉ items có hoạt động' : '👁 Hiện tất cả mặt hàng'}</button>
+  `);
+
+  let html = '<thead><tr><th rowspan="2" style="position:sticky;left:0;background:#f8fafc;z-index:2">Ngày</th>';
+  display.forEach(mh => html += `<th colspan="3" class="num" style="border-left:1px solid var(--c-border)">${mh.ten}<br><small class="text-muted">(${mh.dvt})${mh.isTC?' · TC':''}</small></th>`);
+  html += '</tr><tr>';
+  display.forEach(() => html += '<th class="num" style="border-left:1px solid var(--c-border-light)">Nhập</th><th class="num">Xuất</th><th class="num" style="background:#fff7ed">Tồn</th>');
+  html += '</tr></thead><tbody>';
+
+  for (let d = 1; d <= ngayMax; d++) {
+    html += `<tr><td style="position:sticky;left:0;background:var(--c-card);z-index:1"><strong>${String(d).padStart(2,'0')}/${String(thang).padStart(2,'0')}</strong></td>`;
+    display.forEach(mh => {
+      const dec = mh.decimal ?? 1;
+      const g = grid[mh.id];
+      const nh = g.nh[d], xt = g.xt[d], ton = g.ton[d];
+      html += `<td class="num" style="border-left:1px solid var(--c-border-light)">${nh > 0 ? fmtN(nh, dec) : '—'}</td>
+        <td class="num">${xt > 0 ? fmtN(xt, dec) : '—'}</td>
+        <td class="num" style="font-weight:600;background:#fff7ed;${ton<0?'color:#dc2626':''}">${ton !== 0 ? fmtN(ton, dec) : '—'}</td>`;
+    });
+    html += '</tr>';
+  }
+  html += '</tbody>';
+
+  document.getElementById('page-body').innerHTML = `
+  <div class="banner banner-i" style="font-size:12px">
+    <span class="b-ico">ⓘ</span>
+    <div><strong>Xuất kho công thức Excel:</strong> Với mặt hàng TC kg/L → <code>Σ ROUND(ĐL_TC × QS_TC_bữa, n)</code> trên 4 TC × 3 bữa (QS lấy từ Chấm cơm). Với mặt hàng tươi → tổng SL Đi chợ 3 bữa. ĐVT % bỏ qua.</div>
+  </div>
+  <div class="card-x"><div class="card-x-body p-0">
+    <div style="overflow:auto;max-height:75vh"><table class="t t-compact">${html}</table></div>
+  </div></div>
+  <details class="fold"><summary>Xem công thức Excel</summary>
+    <div class="formula"><span class="cmt"># TC items kg/L (Gạo, Mắm, Muối, Mì chính, Dầu, Vừng-lạc, Gas)</span>
+xuất ngày = SUMPRODUCT(ROUND(<span class="kw">'Tiêu chuẩn'</span>!dl_TC1_STC × <span class="kw">'Quy đổi'</span>!QS_TC1_STC, n))
+          + SUMPRODUCT(ROUND(<span class="kw">'Tiêu chuẩn'</span>!dl_TC2_STC × <span class="kw">'Quy đổi'</span>!QS_TC2_STC, n))
+          + SUMPRODUCT(ROUND(<span class="kw">'Tiêu chuẩn'</span>!dl_TC3_STC × <span class="kw">'Quy đổi'</span>!QS_TC3_STC, n))
+          + SUMPRODUCT(ROUND(<span class="kw">'Tiêu chuẩn'</span>!dl_TC4_STC × <span class="kw">'Quy đổi'</span>!QS_TC4_STC, n))
+
+<span class="cmt"># Tươi (thịt/cá/rau/trứng/đậu): tổng SL Đi chợ 3 bữa</span>
+xuất ngày = Σ SL(S) + SL(T) + SL(C) cho mặt hàng đó
+
+<span class="cmt"># Tồn cuối ngày</span>
+Tồn_d = Tồn_d-1 + Nhập_d − Xuất_d</div>
+  </details>`;
+
+  document.getElementById('tk-toggle').onclick = () => { TONKHO_SHOW_ALL = !TONKHO_SHOW_ALL; renderTonKho(); };
+}
+
+// ============================================================
+// SECTION: SO NHAP XUAT (master ledger 1 ngày)
+// ============================================================
+let SONX_DATE = null;
+function renderSoNX() {
+  setSubtitle('Sổ Nhập-Xuất tổng hợp 1 ngày — Tồn đầu + Nhập − Xuất = Tồn cuối. Cho mọi mặt hàng kg/L (TC + tươi).');
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  const ngayMax = dim(thang, nam);
+  if (!SONX_DATE) {
+    SONX_DATE = `${nam}-${String(thang).padStart(2,'0')}-${String(Math.min(new Date().getDate(), ngayMax)).padStart(2,'0')}`;
+  }
+  const [_,__,dStr] = SONX_DATE.split('-');
+  const d = Math.min(+dStr || 1, ngayMax);
+
+  setActions(`
+    <label class="small text-muted" style="margin:0 6px 0 0">Ngày</label>
+    <input type="date" id="sonx-date" value="${SONX_DATE}" style="padding:6px 10px;border:1px solid var(--c-border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit">
+  `);
+
+  const allItems = DATA.matHang.filter(m => m.dvt !== '%');
+  // Precompute tồn đầu = cumsum đến d-1
+  const tonDauMap = {};
+  allItems.forEach(mh => {
+    let t = 0;
+    for (let dd = 1; dd < d; dd++) {
+      t += nhapKhoNgay(mh.id, dd) - xuatKhoNgay(mh.id, dd);
+    }
+    tonDauMap[mh.id] = t;
+  });
+
+  // Lọc: hiển items có hoạt động trong ngày HOẶC tồn đầu ≠ 0 HOẶC TC
+  const lines = allItems.map(mh => {
+    const tonDau = tonDauMap[mh.id];
+    const nh = nhapKhoNgay(mh.id, d);
+    const xt = xuatKhoNgay(mh.id, d);
+    const ton = tonDau + nh - xt;
+    const active = nh > 0 || xt > 0 || tonDau !== 0 || mh.isTC;
+    return { mh, tonDau, nh, xt, ton, active };
+  }).filter(x => x.active);
+
+  const rowsHtml = lines.map(({ mh, tonDau, nh, xt, ton }) => {
+    const dec = mh.decimal ?? 1;
+    return `<tr>
+      <td><strong>${mh.ten}</strong>${mh.isTC?' <span class="pill pill-i" style="font-size:9.5px;padding:0 5px">TC</span>':''}</td>
+      <td>${mh.dvt}</td>
+      <td class="num">${fmt(mh.gia)}</td>
+      <td class="num">${fmtN(tonDau, dec)}</td>
+      <td class="num">${nh > 0 ? fmtN(nh, dec) : '—'}</td>
+      <td class="num">${xt > 0 ? fmtN(xt, dec) : '—'}</td>
+      <td class="num" style="font-weight:600;${ton<0?'color:#dc2626':''}">${fmtN(ton, dec)}</td>
+      <td class="num">${fmt(Math.round(ton * mh.gia))}</td>
+    </tr>`;
+  }).join('');
+
+  const totalGT = lines.reduce((s, l) => s + l.ton * l.mh.gia, 0);
+
+  document.getElementById('page-body').innerHTML = `
+    <div class="banner banner-i">
+      <span class="b-ico">ⓘ</span>
+      <div>Sổ NX ngày <strong>${ymdToDmy(SONX_DATE)}</strong>. Tồn đầu = tổng (Nhập − Xuất) tích luỹ từ ngày 01 → ${String(d-1).padStart(2,'0')}. Tồn cuối = Tồn đầu + Nhập − Xuất.</div>
+    </div>
+    <div class="card-x"><div class="card-x-body p-0">
+      <table class="t"><thead><tr>
+        <th>Mặt hàng</th><th>ĐVT</th><th class="num">Đơn giá</th>
+        <th class="num">Tồn đầu</th><th class="num">Nhập</th><th class="num">Xuất</th><th class="num">Tồn cuối</th><th class="num">GT tồn (đ)</th>
+      </tr></thead><tbody>${rowsHtml || '<tr><td colspan="8" class="empty-state">Không có hoạt động</td></tr>'}</tbody>
+      <tfoot><tr><td colspan="7"><strong>Tổng giá trị tồn</strong></td><td class="num"><strong>${fmt(Math.round(totalGT))}</strong></td></tr></tfoot>
+      </table>
+    </div></div>
+  `;
+  document.getElementById('sonx-date').onchange = e => { SONX_DATE = e.target.value; renderSoNX(); };
+}
+
+function renderThuaThieu() {
+  setSubtitle('So sánh Thu (tiền ăn) − Chi (giá trị xuất kho) hàng ngày');
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  const ngayMax = dim(thang, nam);
+  const rows = [];
+  let lastSurplus = 0;
+  for (let d = 1; d <= ngayMax; d++) {
+    let thu = 0;
+    DATA.tieuChuan.forEach(tc => {
+      ['S','T','C'].forEach(b => {
+        const qs = demNguoiAnTheoNgayBua(d, b, tc.id);
+        thu += qs * (b==='S'?tc.tienSang:b==='T'?tc.tienTrua:tc.tienChieu);
+      });
+    });
+    let chi = 0;
+    DATA.matHang.forEach(mh => {
+      chi += xuatKhoNgay(mh.id, d) * mh.gia;
+    });
+    const dien = lastSurplus + thu - chi;
+    lastSurplus = dien;
+    rows.push({ d, thu, chi, dien });
+  }
+  const rowsHtml = rows.map(r => `<tr>
+    <td><strong>${String(r.d).padStart(2,'0')}/${String(thang).padStart(2,'0')}</strong></td>
+    <td class="num">${fmt(Math.round(r.thu))}</td>
+    <td class="num">${fmt(Math.round(r.chi))}</td>
+    <td class="num" style="color:${r.dien>=0?'var(--c-success)':'var(--c-danger)'};font-weight:600">${fmt(Math.round(r.dien))}</td>
+  </tr>`).join('');
+  document.getElementById('page-body').innerHTML = `<div class="card-x"><div class="card-x-body p-0">
+    <table class="t t-compact"><thead><tr>
+      <th>Ngày</th><th class="num">Thu (đ)</th><th class="num">Chi (đ)</th><th class="num">Thừa/Thiếu lũy kế</th>
+    </tr></thead><tbody>${rowsHtml}</tbody></table>
+  </div></div>`;
+}
+
+// ============================================================
+// SECTION: TIEN AN
+// ============================================================
+function renderTienAn() {
+  setSubtitle('Tiền ăn từng người = Σ (số bữa × giá TC). Tiền không ăn = Thu chuẩn − Tiền ăn thực.');
+  let tBS=0,tBT=0,tBC=0,tTien=0,tThu=0,tKA=0;
+  const rows = DATA.nguoiAn.filter(n => n.active).map(n => {
+    const tc = getTC(n.tcId);
+    const bs = demSoBua(n.id, 'S');
+    const bt = demSoBua(n.id, 'T');
+    const bc = demSoBua(n.id, 'C');
+    const tongTien = roundMoney(bs*tc.tienSang + bt*tc.tienTrua + bc*tc.tienChieu);
+    const thuChuan = DATA.cauHinh.thuChuan;
+    const ka = roundMoney(thuChuan - tongTien);
+    tBS+=bs; tBT+=bt; tBC+=bc; tTien+=tongTien; tThu+=thuChuan; tKA+=ka;
+    return `<tr>
+      <td class="num">${n.stt}</td><td><strong>${n.hoTen}</strong></td>
+      <td><span class="${tcPill(tc.ma)}">${tc.ma}</span></td>
+      <td class="num">${bs}</td><td class="num">${bt}</td><td class="num">${bc}</td>
+      <td class="num"><strong>${fmt(tongTien)}</strong></td>
+      <td class="num">${fmt(thuChuan)}</td>
+      <td class="num" style="color:${ka>=0?'var(--c-success)':'var(--c-danger)'}">${fmt(ka)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('page-body').innerHTML = `<div class="card-x"><div class="card-x-body p-0">
+    <table class="t"><thead><tr>
+      <th class="num">TT</th><th>Họ tên</th><th>TC</th>
+      <th class="num">Sáng</th><th class="num">Trưa</th><th class="num">Chiều</th>
+      <th class="num">Tiền đã ăn</th><th class="num">Thu chuẩn</th><th class="num">Tiền không ăn</th>
+    </tr></thead><tbody>${rows}</tbody>
+    <tfoot><tr><td colspan="3"><strong>Tổng</strong></td>
+      <td class="num">${fmt(tBS)}</td><td class="num">${fmt(tBT)}</td><td class="num">${fmt(tBC)}</td>
+      <td class="num">${fmt(tTien)}</td><td class="num">${fmt(tThu)}</td><td class="num">${fmt(tKA)}</td>
+    </tr></tfoot></table>
+  </div></div>`;
+}
+
+function renderTienKoAn() {
+  setSubtitle('Danh sách trả tiền không ăn cuối tháng — đã trừ tiền ăn lễ tết');
+  const rows = DATA.nguoiAn.filter(n => n.active).map(n => {
+    const tc = getTC(n.tcId);
+    const bs = demSoBua(n.id, 'S');
+    const bt = demSoBua(n.id, 'T');
+    const bc = demSoBua(n.id, 'C');
+    const tongTien = bs*tc.tienSang + bt*tc.tienTrua + bc*tc.tienChieu;
+    const thuChuan = DATA.cauHinh.thuChuan;
+    const ka = roundMoney(thuChuan - tongTien);
+    return `<tr>
+      <td class="num">${n.stt}</td><td><strong>${n.hoTen}</strong></td>
+      <td>${n.capBac}</td>
+      <td class="num">${fmt(thuChuan)}</td>
+      <td class="num">${fmt(Math.round(tongTien))}</td>
+      <td class="num" style="font-weight:600;color:${ka>=0?'var(--c-success)':'var(--c-danger)'}">${fmt(ka)}</td>
+      <td>${ka > 0 ? '<span class="text-muted small">(ký nhận)</span>' : ''}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('page-body').innerHTML = `<div class="card-x"><div class="card-x-body p-0">
+    <table class="t"><thead><tr>
+      <th class="num">TT</th><th>Họ tên</th><th>Cấp bậc</th>
+      <th class="num">Thu chuẩn</th><th class="num">Tiền đã ăn</th><th class="num">Tiền trả lại</th><th>Ký nhận</th>
+    </tr></thead><tbody>${rows}</tbody></table>
+  </div></div>`;
+}
+
+function renderAnThem() {
+  setSubtitle('Sổ ghi tiền ăn thêm ngoài tiêu chuẩn (lễ tết, tăng cường) — nhập tay');
+  document.getElementById('page-body').innerHTML = `<div class="empty-state"><div class="b-ico">⊕</div>
+    Tab này đang phát triển. Trong Excel gốc: ghi tiền ăn thêm cho từng ngày × loại (lễ tết / cơ quan / thường xuyên).</div>`;
+}
+
+function renderPhanHo() {
+  setSubtitle('Chia bình quân các khoản chi chung — cộng đệm 400đ, làm tròn nghìn (Excel U9)');
+  const tienKh = [DATA.kh1Tien, DATA.kh2Tien, DATA.kh3Tien, DATA.kh4Tien];
+
+  DATA.nguoiAn.filter(n => n.active).forEach(n => {
+    if (!DATA.phanHo.find(p => p.nguoiId === n.id)) {
+      DATA.phanHo.push({ nguoiId:n.id, kh1:false, kh2:false, kh3:false, kh4:false });
+    }
+  });
+  saveData();
+
+  const counts = [0,0,0,0];
+  DATA.phanHo.forEach(p => {
+    if (p.kh1) counts[0]++; if (p.kh2) counts[1]++; if (p.kh3) counts[2]++; if (p.kh4) counts[3]++;
+  });
+
+  let tong = 0;
+  const rows = DATA.nguoiAn.filter(n => n.active).map(n => {
+    const p = DATA.phanHo.find(x => x.nguoiId === n.id) || { kh1:false, kh2:false, kh3:false, kh4:false };
+    let s = 0;
+    if (p.kh1 && counts[0] > 0) s += tienKh[0] / counts[0];
+    if (p.kh2 && counts[1] > 0) s += tienKh[1] / counts[1];
+    if (p.kh3 && counts[2] > 0) s += tienKh[2] / counts[2];
+    if (p.kh4 && counts[3] > 0) s += tienKh[3] / counts[3];
+    const ph = s > 0 ? roundToUnit(s + DATA.bule, DATA.donVi_phanho) : 0;
+    tong += ph;
+    const tc = getTC(n.tcId);
+    const cb = key => `<input type="checkbox" data-nguoi="${n.id}" data-key="${key}" ${p[key]?'checked':''}>`;
+    return `<tr><td><strong>${n.hoTen}</strong></td><td><span class="${tcPill(tc.ma)}">${tc.ma}</span></td>
+      <td class="num">${cb('kh1')}</td><td class="num">${cb('kh2')}</td><td class="num">${cb('kh3')}</td><td class="num">${cb('kh4')}</td>
+      <td class="num"><strong>${fmt(ph)}</strong></td></tr>`;
+  }).join('');
+
+  document.getElementById('page-body').innerHTML = `
+    <div class="card-x"><div class="card-x-head"><h3>Cấu hình</h3></div>
+      <div class="card-x-body fx">
+        <div class="fx-row">
+          <div><label>Bù lẻ (đệm)</label><input type="number" id="ph-bule" value="${DATA.bule}"></div>
+          <div><label>Đơn vị làm tròn (đ)</label><input type="number" id="ph-unit" value="${DATA.donVi_phanho}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-x"><div class="card-x-body p-0">
+      <table class="t"><thead><tr>
+        <th>Họ tên</th><th>TC</th>
+        <th class="num">Cơm khách</th><th class="num">Cơm mô hình</th><th class="num">Rượu lễ</th><th class="num">Thuốc</th>
+        <th class="num">Phân hộ</th>
+      </tr></thead><tbody>${rows}</tbody>
+      <tfoot>
+        <tr><td colspan="2">Tổng tiền khoản (đ)</td>
+          <td class="num"><input type="number" id="kh1-tien" value="${DATA.kh1Tien}" style="width:120px;padding:4px;border:1px solid var(--c-border);border-radius:4px;text-align:right"></td>
+          <td class="num"><input type="number" id="kh2-tien" value="${DATA.kh2Tien}" style="width:120px;padding:4px;border:1px solid var(--c-border);border-radius:4px;text-align:right"></td>
+          <td class="num"><input type="number" id="kh3-tien" value="${DATA.kh3Tien}" style="width:120px;padding:4px;border:1px solid var(--c-border);border-radius:4px;text-align:right"></td>
+          <td class="num"><input type="number" id="kh4-tien" value="${DATA.kh4Tien}" style="width:120px;padding:4px;border:1px solid var(--c-border);border-radius:4px;text-align:right"></td>
+          <td></td></tr>
+        <tr><td colspan="2">Số người tham gia</td>
+          <td class="num">${counts[0]}</td><td class="num">${counts[1]}</td><td class="num">${counts[2]}</td><td class="num">${counts[3]}</td>
+          <td class="num"><strong>${fmt(tong)}</strong></td></tr>
+      </tfoot></table>
+    </div></div>
+  `;
+
+  document.querySelectorAll('#page-body input[type=checkbox]').forEach(cb => {
+    cb.onchange = () => {
+      const nid = +cb.dataset.nguoi;
+      const k = cb.dataset.key;
+      let p = DATA.phanHo.find(x => x.nguoiId === nid);
+      if (!p) { p = { nguoiId:nid, kh1:false, kh2:false, kh3:false, kh4:false }; DATA.phanHo.push(p); }
+      p[k] = cb.checked;
+      saveData(); renderPhanHo();
+    };
+  });
+  const upd = () => {
+    DATA.bule = +document.getElementById('ph-bule').value || 0;
+    DATA.donVi_phanho = +document.getElementById('ph-unit').value || 1000;
+    DATA.kh1Tien = +document.getElementById('kh1-tien').value || 0;
+    DATA.kh2Tien = +document.getElementById('kh2-tien').value || 0;
+    DATA.kh3Tien = +document.getElementById('kh3-tien').value || 0;
+    DATA.kh4Tien = +document.getElementById('kh4-tien').value || 0;
+    saveData(); renderPhanHo();
+  };
+  ['ph-bule','ph-unit','kh1-tien','kh2-tien','kh3-tien','kh4-tien'].forEach(id => {
+    document.getElementById(id).addEventListener('change', upd);
+  });
+}
+
+// ============================================================
+// SECTION: TBHC chi ăn 1 ngày
+// ============================================================
+function renderTBHC() {
+  setSubtitle('Báo cáo chi tiêu 1 ngày — công thức ROUND(hệ_số × QS, n) theo từng nhóm. Cẩn thận sai số làm tròn ở mì chính, gia vị %.');
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  const ngayMax = dim(thang, nam);
+  const today = new Date().getDate();
+  const d = Math.min(today, ngayMax);
+
+  // Lấy QS theo TC và bữa từ chấm cơm
+  const qs = {};
+  DATA.tieuChuan.forEach(tc => {
+    qs[tc.id] = {
+      S: demNguoiAnTheoNgayBua(d, 'S', tc.id),
+      T: demNguoiAnTheoNgayBua(d, 'T', tc.id),
+      C: demNguoiAnTheoNgayBua(d, 'C', tc.id),
+    };
+  });
+
+  // Tính chi từng mặt hàng tiêu chuẩn theo công thức ROUND(định_lượng × QS, n)
+  const rows = DATA.matHang.filter(m => m.isTC && TC_DINH_LUONG[m.ma]).map(mh => {
+    const dl = TC_DINH_LUONG[mh.ma];
+    const dec = dl.dec;
+    let slS = 0, slT = 0, slC = 0;
+    DATA.tieuChuan.forEach((tc, tcIdx) => {
+      const base = tcIdx * 3;
+      slS += roundExcel(dl.dl[base] * qs[tc.id].S, dec);
+      slT += roundExcel(dl.dl[base+1] * qs[tc.id].T, dec);
+      slC += roundExcel(dl.dl[base+2] * qs[tc.id].C, dec);
+    });
+    const gia = mh.gia;
+    return { mh, slS, slT, slC, ttS: slS*gia, ttT: slT*gia, ttC: slC*gia, dec };
+  });
+
+  const sumS = rows.reduce((s,r) => s + r.ttS, 0);
+  const sumT = rows.reduce((s,r) => s + r.ttT, 0);
+  const sumC = rows.reduce((s,r) => s + r.ttC, 0);
+
+  // Thu = QS × tiền TC
+  let thuS = 0, thuT = 0, thuC = 0;
+  DATA.tieuChuan.forEach(tc => {
+    thuS += qs[tc.id].S * tc.tienSang;
+    thuT += qs[tc.id].T * tc.tienTrua;
+    thuC += qs[tc.id].C * tc.tienChieu;
+  });
+  const totalThu = thuS + thuT + thuC;
+  const totalChi = sumS + sumT + sumC;
+  const dien = totalThu - totalChi;
+
+  const qsByBua = { S: DATA.tieuChuan.reduce((s,t)=>s+qs[t.id].S,0), T: DATA.tieuChuan.reduce((s,t)=>s+qs[t.id].T,0), C: DATA.tieuChuan.reduce((s,t)=>s+qs[t.id].C,0) };
+
+  document.getElementById('page-body').innerHTML = `
+    <div class="banner banner-w">
+      <span class="b-ico">⚠</span>
+      <div><strong>Cảnh báo làm tròn:</strong> Mì chính dùng <code>ROUND(..., 2)</code> vì định lượng cực nhỏ (0.0004 kg/người). Các mặt hàng khác dùng <code>ROUND(..., 1)</code>. Sai số xuất kho có thể sai 0.1kg nếu thay đổi quy tắc làm tròn.</div>
+    </div>
+    <div class="card-x"><div class="card-x-head"><h3>Quân số chấm cơm ngày ${String(d).padStart(2,'0')}/${String(thang).padStart(2,'0')}/${nam}</h3></div>
+      <div class="card-x-body p-0">
+        <table class="t t-compact"><thead><tr><th>TC</th><th class="num">Sáng</th><th class="num">Trưa</th><th class="num">Chiều</th></tr></thead>
+        <tbody>${DATA.tieuChuan.map(tc => `<tr>
+          <td><span class="${tcPill(tc.ma)}">${tc.ma}</span></td>
+          <td class="num">${qs[tc.id].S}</td><td class="num">${qs[tc.id].T}</td><td class="num">${qs[tc.id].C}</td>
+        </tr>`).join('')}
+        <tr style="background:#fff7ed"><td><strong>Tổng</strong></td>
+          <td class="num"><strong>${qsByBua.S}</strong></td>
+          <td class="num"><strong>${qsByBua.T}</strong></td>
+          <td class="num"><strong>${qsByBua.C}</strong></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+    <div class="card-x"><div class="card-x-head"><h3>Bảng tính chi ăn</h3></div>
+      <div class="card-x-body p-0">
+        <table class="t t-compact"><thead><tr>
+          <th>Mặt hàng</th><th class="num">Giá</th>
+          <th class="num">SL Sáng</th><th class="num">TT Sáng</th>
+          <th class="num">SL Trưa</th><th class="num">TT Trưa</th>
+          <th class="num">SL Chiều</th><th class="num">TT Chiều</th>
+          <th>Quy tắc làm tròn</th>
+        </tr></thead><tbody>${rows.map(r => `<tr>
+          <td><strong>${r.mh.ten}</strong></td>
+          <td class="num">${fmt(r.mh.gia)}</td>
+          <td class="num">${fmtN(r.slS, r.dec)}</td><td class="num">${fmt(Math.round(r.ttS))}</td>
+          <td class="num">${fmtN(r.slT, r.dec)}</td><td class="num">${fmt(Math.round(r.ttT))}</td>
+          <td class="num">${fmtN(r.slC, r.dec)}</td><td class="num">${fmt(Math.round(r.ttC))}</td>
+          <td><span class="code">ROUND(., ${r.dec})</span></td>
+        </tr>`).join('')}</tbody>
+        <tfoot>
+          <tr><td colspan="3"><strong>Cộng chi</strong></td>
+            <td class="num"><strong>${fmt(Math.round(sumS))}</strong></td><td></td>
+            <td class="num"><strong>${fmt(Math.round(sumT))}</strong></td><td></td>
+            <td class="num"><strong>${fmt(Math.round(sumC))}</strong></td><td></td></tr>
+          <tr style="background:#ecfdf5"><td colspan="3"><strong>Thu (QS × giá TC)</strong></td>
+            <td class="num"><strong>${fmt(Math.round(thuS))}</strong></td><td></td>
+            <td class="num"><strong>${fmt(Math.round(thuT))}</strong></td><td></td>
+            <td class="num"><strong>${fmt(Math.round(thuC))}</strong></td><td></td></tr>
+          <tr style="background:#fef3c7"><td colspan="7"><strong>Thừa/Thiếu ngày = Thu (${fmt(Math.round(totalThu))}) − Chi (${fmt(Math.round(totalChi))})</strong></td>
+            <td class="num"><strong style="color:${dien>=0?'var(--c-success)':'var(--c-danger)'}">${fmt(Math.round(dien))}</strong></td><td></td></tr>
+        </tfoot></table>
+      </div>
+    </div>
+    <details class="fold"><summary>Xem công thức Excel</summary>
+      <div class="formula"><span class="cmt"># TBHC (1) C9 - chi gạo sáng</span>
+= ROUND(0.14 × SUM(QS_S), 1)        <span class="cmt"># làm tròn 1 chữ số (kg)</span>
+
+<span class="cmt"># Mì chính cẩn thận: định lượng cực nhỏ → ROUND 2 chữ số</span>
+= ROUND(0.0004 × SUM(QS_S), 2)
+
+<span class="cmt"># Điện, gia vị (%) → số nguyên</span>
+= ROUND(SUM(QS) × 0.2, 0)
+= ROUND(0.05 × SUM(QS_TRUA), 0)</div>
+    </details>
+  `;
+}
+
+// ============================================================
+// SECTION: CONG KHAI TC
+// ============================================================
+function renderCongKhai() {
+  setSubtitle('Báo cáo Công khai tài chính cuối tháng — auto từ chấm cơm + giá CK cấu hình ở Mục lục');
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  const ngayMax = dim(thang, nam);
+
+  let qsS = 0, qsT = 0, qsC = 0;
+  for (let d = 1; d <= ngayMax; d++) {
+    qsS += demNguoiAnTheoNgayBua(d, 'S');
+    qsT += demNguoiAnTheoNgayBua(d, 'T');
+    qsC += demNguoiAnTheoNgayBua(d, 'C');
+  }
+  const giaS = DATA.cauHinh.giaSangCK;
+  const giaT = DATA.cauHinh.giaTruaCK;
+  const giaC = DATA.cauHinh.giaChieuCK;
+  const chuyen = DATA.cauHinh.chuyenThangTruoc;
+  const ttS = qsS * giaS, ttT = qsT * giaT, ttC = qsC * giaC;
+  const tongThu = ttS + ttT + ttC + chuyen;
+
+  // Gạo: ROUND((S*0.18 + (T+C)*0.22)/10, 0) * 10 - tròn chục
+  const gao = roundToUnit((qsS*0.18 + (qsT+qsC)*0.22) / 10, 1) * 10;
+  const giaGao = getMH(1)?.gia || 13140;
+  const ttGao = gao * giaGao;
+
+  // Thịt lợn: ROUND((S+T*2+C*2)/5 * 0.17 / 10, 1) * 10
+  const tcAvg = (qsS*1 + qsT*2 + qsC*2) / 5;
+  const thitLon = roundToUnit(tcAvg * 0.17 / 10, 1) * 10;
+  const ttThit = thitLon * 130000;
+
+  // Gia vị: ROUND(thu * 4% / 1000, 0) * 1000
+  const giaVi = roundThousand(tongThu * 0.04);
+  const tongChi = ttGao + ttThit + giaVi;
+  const canDoi = tongThu - tongChi;
+
+  const html = `
+    <div class="card-x">
+      <div class="card-x-head"><h3>BÁO CÁO CÔNG KHAI TÀI CHÍNH — Tháng ${thang}/${nam}</h3>
+      <div class="text-muted small">Đơn vị: <strong>${DATA.cauHinh.donVi}</strong></div></div>
+      <div class="card-x-body p-0">
+        <table class="t"><thead><tr>
+          <th>TT</th><th>Nội dung</th><th>ĐVT</th>
+          <th class="num">Số lượng</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th>
+        </tr></thead><tbody>
+          <tr style="background:#f8fafc"><td><strong>A</strong></td><td colspan="4"><strong>PHẦN THU</strong></td><td></td></tr>
+          <tr><td>1</td><td>Bữa sáng</td><td>Suất</td><td class="num">${qsS}</td><td class="num">${fmt(giaS)}</td><td class="num">${fmt(ttS)}</td></tr>
+          <tr><td>2</td><td>Bữa trưa</td><td>Suất</td><td class="num">${qsT}</td><td class="num">${fmt(giaT)}</td><td class="num">${fmt(ttT)}</td></tr>
+          <tr><td>3</td><td>Bữa chiều</td><td>Suất</td><td class="num">${qsC}</td><td class="num">${fmt(giaC)}</td><td class="num">${fmt(ttC)}</td></tr>
+          <tr><td>4</td><td>Tháng trước chuyển sang</td><td>—</td><td class="num">—</td><td class="num">—</td><td class="num">${fmt(chuyen)}</td></tr>
+          <tr style="background:#fff7ed"><td></td><td colspan="4"><strong>Cộng thu</strong></td><td class="num"><strong>${fmt(tongThu)}</strong></td></tr>
+          <tr style="background:#f8fafc"><td><strong>B</strong></td><td colspan="4"><strong>PHẦN CHI</strong></td><td></td></tr>
+          <tr><td>1</td><td>Gạo <span class="code">ROUND chục</span></td><td>Kg</td><td class="num">${fmt(gao)}</td><td class="num">${fmt(giaGao)}</td><td class="num">${fmt(ttGao)}</td></tr>
+          <tr><td>2</td><td>Thịt lợn <span class="code">ROUND đơn vị</span></td><td>Kg</td><td class="num">${fmt(thitLon)}</td><td class="num">130,000</td><td class="num">${fmt(ttThit)}</td></tr>
+          <tr><td>3</td><td>Gia vị, mắm, muối, mì chính <span class="code">ROUND nghìn (4% × thu)</span></td><td>—</td><td class="num">—</td><td class="num">—</td><td class="num">${fmt(giaVi)}</td></tr>
+          <tr style="background:#fff7ed"><td></td><td colspan="4"><strong>Cộng chi</strong></td><td class="num"><strong>${fmt(tongChi)}</strong></td></tr>
+          <tr style="background:${canDoi>=0?'#ecfdf5':'#fef2f2'}"><td colspan="5"><strong>Cân đối (Thu − Chi)</strong></td>
+            <td class="num"><strong style="color:${canDoi>=0?'var(--c-success)':'var(--c-danger)'}">${fmt(canDoi)}</strong></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  `;
+  document.getElementById('page-body').innerHTML = html;
+}
+
+function renderSuDungTP() {
+  setSubtitle('Báo cáo Sử dụng TP-CĐ trong tháng — Σ Nhập, Σ Xuất, Tồn cuối tháng');
+  const { thang, nam } = DATA.cauHinh.kyHienTai;
+  const ngayMax = dim(thang, nam);
+
+  const rows = DATA.matHang.filter(m => m.isTC).map(mh => {
+    let nhap = 0, xuat = 0;
+    for (let d = 1; d <= ngayMax; d++) {
+      nhap += nhapKhoNgay(mh.id, d);
+      xuat += xuatKhoNgay(mh.id, d);
+    }
+    const ton = nhap - xuat;
+    return `<tr>
+      <td><strong>${mh.ten}</strong></td><td>${mh.dvt}</td>
+      <td class="num">${fmtN(nhap, mh.decimal)}</td>
+      <td class="num">${fmtN(xuat, mh.decimal)}</td>
+      <td class="num" style="font-weight:600;${ton<0?'color:#dc2626':''}">${fmtN(ton, mh.decimal)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('page-body').innerHTML = `<div class="card-x"><div class="card-x-body p-0">
+    <table class="t"><thead><tr>
+      <th>Mặt hàng</th><th>ĐVT</th><th class="num">Σ Nhập</th><th class="num">Σ Xuất</th><th class="num">Tồn cuối tháng</th>
+    </tr></thead><tbody>${rows}</tbody></table>
+  </div></div>`;
+}
+
+function renderBBTinhKho() {
+  setSubtitle('Biên bản tịnh kho cuối tháng — đối chiếu sổ với thực tế');
+  document.getElementById('page-body').innerHTML = `<div class="empty-state"><div class="b-ico">▭</div>
+    Tab này đang phát triển. Sẽ in biên bản tịnh kho từ Tồn kho cuối tháng + nhập tay số lượng kiểm kê thực tế.</div>`;
+}
+
+function renderDCCD() {
+  setSubtitle('Tình hình dụng cụ cấp dưỡng');
+  document.getElementById('page-body').innerHTML = `<div class="empty-state"><div class="b-ico">▪</div>
+    Tab này đang phát triển. Sẽ quản lý nồi niêu, xoong chảo, dao thớt, bát đũa... theo định kỳ kiểm kê.</div>`;
+}
+
+// ============================================================
+// RESET / INIT
+// ============================================================
+document.getElementById('btn-reset').onclick = () => {
+  if (!confirm('Khôi phục dữ liệu mẫu?')) return;
+  DATA = DEFAULT_DATA(); saveData();
+  showSection('dashboard');
+};
+document.getElementById('btn-clear').onclick = () => {
+  if (!confirm('Xoá HẾT dữ liệu? Không hoàn tác.')) return;
+  DATA = DEFAULT_DATA();
+  DATA.nguoiAn = [];
+  DATA.chamCom = {};
+  DATA.thucDon = {};
+  DATA.nhapTrongNgay = [];
+  saveData();
+  showSection('dashboard');
+};
+
+// Initial render
+showSection('dashboard');
+</script>
+</body>
+</html>
