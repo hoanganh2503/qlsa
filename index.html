@@ -3106,8 +3106,7 @@ window.dichoImport = function() {
   alert(`Đã import ${keys.length} mặt hàng (mã phiếu ${maPhieu}) sang Nhập trong ngày.`);
 };
 
-window.dichoExportExcel = function() {
-  if (typeof XLSX === 'undefined') { alert('Thư viện Excel chưa load xong. Đợi 1-2 giây rồi bấm lại.'); return; }
+window.dichoExportExcel = async function() {
   const ngay = DICHO_DATE;
   const day = DATA.diCho[ngay];
   if (!day) { alert('Chưa có dữ liệu Đi chợ ngày này'); return; }
@@ -3165,169 +3164,122 @@ window.dichoExportExcel = function() {
   const tongThu = tongThuBua + tongAnThem + ttTruoc;
   const ttNgay = tongThu - tongChi;
 
-  // Cột layout: 0-3 Sáng | 4 gap | 5-8 Trưa | 9 gap | 10-13 Chiều | 14 gap | 15-18 Agg
-  const W = 19;
-  const aoa = [];
-  let aggIdx = 0;
-  const pickAgg = () => {
-    if (aggIdx >= aggList.length) return {};
-    const a = aggList[aggIdx++];
-    return {
-      15: a.ten,
-      16: a.sl,
-      17: a.tt,
-      18: a.sl > 0 ? a.tt / a.sl : 0,
-    };
-  };
-  const pushRow = (vals = {}) => {
-    const r = Array(W).fill('');
-    Object.entries(vals).forEach(([k,v]) => { r[+k] = v; });
-    aoa.push(r);
-  };
-
-  // Tiêu đề
-  pushRow({ 0:`ĐI CHỢ NGÀY ${ymdToDmy(ngay)} — ${DATA.cauHinh.donVi}` });
-  pushRow();
-
-  // Header bữa (row 2)
-  pushRow({ 0:'Sáng', 5:'Trưa', 10:'Chiều', 15:'Bảng tổng kê (gộp 3 bữa)' });
-
-  // QS/Mức ăn/Cộng headers + agg header (row 3)
-  pushRow({
-    0:'QS',1:'Mức ăn',2:'Cộng',
-    5:'QS',6:'Mức ăn',7:'Cộng',
-    10:'QS',11:'Mức ăn',12:'Cộng',
-    15:'Tên', 16:'Số lượng', 17:'Thành tiền', 18:'Đơn giá',
-  });
-
-  // QS values
-  pushRow({
-    0: calc.S.qs, 1: calc.S.mua, 2: calc.S.cong,
-    5: calc.T.qs, 6: calc.T.mua, 7: calc.T.cong,
-    10: calc.C.qs, 11: calc.C.mua, 12: calc.C.cong,
-    ...pickAgg(),
-  });
-
-  // Ăn thêm
-  pushRow({
-    0:'Ăn thêm', 2:+day.S.anThem||0,
-    5:'Ăn thêm', 7:+day.T.anThem||0,
-    10:'Ăn thêm', 12:+day.C.anThem||0,
-    ...pickAgg(),
-  });
-
-  // Tổng
-  pushRow({
-    0:'Tổng', 2: calc.S.cong + (+day.S.anThem||0),
-    5:'Tổng', 7: calc.T.cong + (+day.T.anThem||0),
-    10:'Tổng', 12: calc.C.cong + (+day.C.anThem||0),
-    ...pickAgg(),
-  });
-
-  // Loại/Giá/SL/ThànhTiền headers
-  pushRow({
-    0:'Loại',1:'Giá',2:'SL',3:'Thành tiền',
-    5:'Loại',6:'Giá',7:'SL',8:'Thành tiền',
-    10:'Loại',11:'Giá',12:'SL',13:'Thành tiền',
-    ...pickAgg(),
-  });
-
-  // Items rows: TC items trước, free items sau (chỉ những dòng đã điền)
+  // ====== Xuất Excel (ExcelJS) — bố cục xếp dọc, kẻ khung, dễ đọc ======
+  // Gộp TC + tươi của 1 bữa (TC trước, tươi sau) — chỉ dòng đã điền.
   const buaAll = b => {
     const tc = (calc[b].rows || []).map(it => ({
-      ten: it.mh ? it.mh.ten + (it.isPct?' (%)':'') : '',
-      gia: it.isPct ? '' : it.dg,
-      sl: it.sl, tt: it.tt,
+      ten: it.mh ? it.mh.ten + (it.isPct ? ' (%)' : '') : '',
+      gia: it.isPct ? '' : it.dg, sl: it.sl, tt: it.tt,
     }));
     const free = (calc[b].freeRows || []).map(it => ({
       ten: it.ten, gia: it.gia, sl: it.sl, tt: it.tt,
     }));
     return [...tc, ...free];
   };
-  const allS = buaAll('S'), allT = buaAll('T'), allC = buaAll('C');
-  const maxItems = Math.max(allS.length, allT.length, allC.length);
-  for (let i = 0; i < maxItems; i++) {
-    const r = {};
-    [[allS, 0], [allT, 5], [allC, 10]].forEach(([arr, off]) => {
-      const it = arr[i];
-      if (it && it.ten) {
-        r[off]   = it.ten;
-        r[off+1] = it.gia;
-        r[off+2] = it.sl;
-        r[off+3] = it.tt;
+
+  try {
+    await _ensureExcelJS();
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Đi chợ');
+    const FNAME = 'Times New Roman';
+    const bold    = { name: FNAME, size: 11, bold: true };
+    const boldBig = { name: FNAME, size: 15, bold: true };
+    const normal  = { name: FNAME, size: 11 };
+    const center  = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    const right   = { horizontal: 'right', vertical: 'middle' };
+    const left    = { horizontal: 'left', vertical: 'middle' };
+    const fillBand = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } };
+    const fillHdr  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+    const fillTot  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF2FF' } };
+    const MONEY = '#,##0';
+    const SLF = '#,##0.##';
+    // 19 cột: S=1-4 | gap5 | T=6-9 | gap10 | C=11-14 | gap15 | Tổng kê=16-19
+    [16, 9, 8, 13, 2, 16, 9, 8, 13, 2, 16, 9, 8, 13, 2, 22, 10, 14, 11].forEach((w, i) => ws.getColumn(i + 1).width = w);
+
+    const box = (t, l, b, r2) => { for (let rr = t; rr <= b; rr++) for (let cc = l; cc <= r2; cc++) ws.getCell(rr, cc).border = _XL_BORDER_ALL; };
+    const cell = (rr, cc, val, { font = normal, align = right, fmt = null, fill = null } = {}) => {
+      const c = ws.getCell(rr, cc); c.value = val; c.font = font; c.alignment = align; c.border = _XL_BORDER_ALL;
+      if (fmt) c.numFmt = fmt; if (fill) c.fill = fill; return c;
+    };
+    const mcell = (t, l, b, r2, val, opts = {}) => { ws.mergeCells(t, l, b, r2); cell(t, l, val, opts); box(t, l, b, r2); };
+
+    // Tiêu đề (toàn bộ chiều ngang)
+    mcell(1, 1, 1, 19, `ĐI CHỢ NGÀY ${ymdToDmy(ngay)}${DATA.cauHinh.donVi ? '  —  ' + DATA.cauHinh.donVi : ''}`, { font: boldBig, align: center });
+
+    const bases = { S: 1, T: 6, C: 11 };
+    const buaName = { S: 'SÁNG', T: 'TRƯA', C: 'CHIỀU' };
+    const itemsByB = { S: buaAll('S').filter(it => it.ten), T: buaAll('T').filter(it => it.ten), C: buaAll('C').filter(it => it.ten) };
+    const maxItems = Math.max(1, itemsByB.S.length, itemsByB.T.length, itemsByB.C.length);
+
+    // Các hàng (3 bữa nằm ngang, dùng chung số dòng)
+    const rBand = 3;            // "SÁNG"/"TRƯA"/"CHIỀU"
+    const rSumH = rBand + 1;    // QS | Mức ăn | Cộng | Ăn thêm
+    const rSumV = rBand + 2;    // giá trị
+    const rTong = rBand + 3;    // Tổng
+    const rItemH = rBand + 4;   // Loại | Giá | SL | Thành tiền
+    const rItem0 = rBand + 5;   // dòng mặt hàng đầu
+    const rCong = rItem0 + maxItems;   // Cộng chi
+
+    ['S', 'T', 'C'].forEach(b => {
+      const bc = bases[b], C = calc[b], anThem = +day[b].anThem || 0;
+      mcell(rBand, bc, rBand, bc + 3, buaName[b], { font: bold, align: center, fill: fillBand });
+      ['QS', 'Mức ăn', 'Cộng', 'Ăn thêm'].forEach((h, i) => cell(rSumH, bc + i, h, { font: bold, align: center, fill: fillHdr }));
+      cell(rSumV, bc, C.qs, { align: center });
+      cell(rSumV, bc + 1, C.mua, { fmt: MONEY });
+      cell(rSumV, bc + 2, Math.round(C.cong), { fmt: MONEY });
+      cell(rSumV, bc + 3, anThem, { fmt: MONEY });
+      mcell(rTong, bc, rTong, bc + 2, 'Tổng', { font: bold, align: right, fill: fillTot });
+      cell(rTong, bc + 3, Math.round(C.cong + anThem), { font: bold, fmt: MONEY, fill: fillTot });
+      ['Loại', 'Giá', 'SL', 'Thành tiền'].forEach((h, i) => cell(rItemH, bc + i, h, { font: bold, align: i === 0 ? left : center, fill: fillHdr }));
+      const its = itemsByB[b];
+      for (let i = 0; i < maxItems; i++) {
+        const rr = rItem0 + i, it = its[i];
+        if (it) {
+          cell(rr, bc, it.ten, { align: left });
+          cell(rr, bc + 1, (it.gia === '' || it.gia == null) ? null : Math.round(it.gia), { fmt: MONEY });
+          cell(rr, bc + 2, it.sl || 0, { fmt: SLF });
+          cell(rr, bc + 3, Math.round(it.tt || 0), { fmt: MONEY });
+        } else { box(rr, bc, rr, bc + 3); }
       }
+      mcell(rCong, bc, rCong, bc + 2, 'Cộng chi', { font: bold, align: right, fill: fillTot });
+      cell(rCong, bc + 3, Math.round(C.chi), { font: bold, fmt: MONEY, fill: fillTot });
     });
-    Object.assign(r, pickAgg());
-    pushRow(r);
-  }
 
-  // Cộng chi
-  pushRow({
-    0:'Cộng chi', 3: calc.S.chi,
-    5:'Cộng chi', 8: calc.T.chi,
-    10:'Cộng chi', 13: calc.C.chi,
-    ...pickAgg(),
-  });
-
-  // Nếu agg còn nhiều hơn → đẩy tiếp xuống cột phải
-  while (aggIdx < aggList.length) pushRow(pickAgg());
-
-  // Khoảng trống + Day summary
-  pushRow();
-  pushRow({ 0:'Thu trong ngày', 3: tongThuBua });
-  pushRow({ 0:'Ăn thêm', 3: tongAnThem });
-  pushRow({ 0:'Bù giá gạo', 3: 0 });
-  pushRow({ 0:'Thừa/thiếu hôm trước', 3: ttTruoc });
-  pushRow({ 0:'Tổng thu', 3: tongThu });
-  pushRow({ 0:'Tổng chi', 3: tongChi });
-  pushRow({ 0:'Thừa/thiếu trong ngày', 3: ttNgay });
-
-  // Footer aggregate
-  pushRow({ 16:'Tổng nhóm', 17: tongAgg });
-  pushRow({ 16:'Tổng', 17: tongAgg });
-
-  // Build sheet
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-  // Column widths
-  ws['!cols'] = [
-    {wch:18},{wch:9},{wch:8},{wch:12}, {wch:2},
-    {wch:18},{wch:9},{wch:8},{wch:12}, {wch:2},
-    {wch:18},{wch:9},{wch:8},{wch:12}, {wch:2},
-    {wch:22},{wch:10},{wch:14},{wch:12},
-  ];
-
-  // Number format cho cột tiền + SL
-  const moneyFmt = '#,##0';
-  const slFmt = '#,##0.00';
-  const setFmt = (r, c, fmt) => {
-    const ref = XLSX.utils.encode_cell({ r, c });
-    if (ws[ref] && typeof ws[ref].v === 'number') ws[ref].z = fmt;
-  };
-  for (let r = 0; r < aoa.length; r++) {
-    [1,2,3, 6,7,8, 11,12,13, 17,18].forEach(c => setFmt(r, c, moneyFmt));
-    [16].forEach(c => setFmt(r, c, slFmt));
-    // SL cột 2/7/12 ở rows items dùng decimal — overwrite money fmt
-    [2,7,12].forEach(c => {
-      const ref = XLSX.utils.encode_cell({ r, c });
-      if (ws[ref] && typeof ws[ref].v === 'number' && ws[ref].v !== 0 && ws[ref].v < 1000) {
-        ws[ref].z = slFmt;
-      }
+    // ===== Bảng tổng kê (cột 16-19), cách 1 cột (cột 15) =====
+    const A0 = 16;
+    mcell(rBand, A0, rBand, A0 + 3, 'BẢNG TỔNG KÊ — GỘP 3 BỮA', { font: bold, align: center, fill: fillBand });
+    ['Tên', 'Số lượng', 'Thành tiền', 'Đơn giá'].forEach((h, i) => cell(rSumH, A0 + i, h, { font: bold, align: i === 0 ? left : center, fill: fillHdr }));
+    let ar = rSumV;
+    aggList.forEach(a => {
+      cell(ar, A0, a.ten, { align: left });
+      cell(ar, A0 + 1, a.sl || 0, { fmt: SLF });
+      cell(ar, A0 + 2, Math.round(a.tt || 0), { fmt: MONEY });
+      cell(ar, A0 + 3, a.sl > 0 ? Math.round(a.tt / a.sl) : 0, { fmt: MONEY });
+      ar++;
     });
+    mcell(ar, A0, ar, A0 + 1, 'Tổng', { font: bold, align: right, fill: fillTot });
+    cell(ar, A0 + 2, Math.round(tongAgg), { font: bold, fmt: MONEY, fill: fillTot });
+    cell(ar, A0 + 3, null, { fill: fillTot });
+
+    // ===== Kết toán ngày (dưới khối Sáng, cột 1-4) =====
+    let kr = rCong + 2;
+    const ktRow = (label, val, b2 = false) => {
+      mcell(kr, 1, kr, 3, label, { font: b2 ? bold : normal, align: left, fill: b2 ? fillTot : null });
+      cell(kr, 4, Math.round(val), { font: b2 ? bold : normal, fmt: MONEY, fill: b2 ? fillTot : null });
+      kr++;
+    };
+    ktRow('Thu trong ngày (QS×TC1)', tongThuBua);
+    ktRow('Ăn thêm', tongAnThem);
+    ktRow('Bù giá gạo', 0);
+    ktRow('Thừa/thiếu hôm trước', ttTruoc);
+    ktRow('Tổng thu', tongThu, true);
+    ktRow('Tổng chi', tongChi, true);
+    ktRow('Thừa/thiếu trong ngày', ttNgay, true);
+
+    await _xlsxDownload(wb, `DiCho_${ngay}.xlsx`);
+  } catch (e) {
+    alert('Lỗi xuất Excel: ' + (e.message || e));
   }
-
-  // Merges
-  ws['!merges'] = [
-    {s:{r:0,c:0}, e:{r:0,c:18}}, // Title
-    {s:{r:2,c:0}, e:{r:2,c:2}},   // "Sáng"
-    {s:{r:2,c:5}, e:{r:2,c:7}},   // "Trưa"
-    {s:{r:2,c:10}, e:{r:2,c:12}}, // "Chiều"
-    {s:{r:2,c:15}, e:{r:2,c:18}}, // "Bảng tổng kê"
-  ];
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Đi chợ');
-  XLSX.writeFile(wb, `DiCho_${ngay}.xlsx`);
 };
 
 function renderBangKe() {
@@ -5154,6 +5106,106 @@ function _ensureSoNxCss() {
   document.head.appendChild(s);
 }
 
+// Tính toàn bộ số liệu Sổ Nhập–Xuất 1 ngày — DÙNG CHUNG cho cả render (màn hình) và xuất Excel
+// để 2 nơi luôn khớp nhau (file Excel giống hệt giao diện).
+function _soNxBuild(ngayYmd) {
+  const { y, m, d } = _ymdParse(ngayYmd);
+  const tonKho = buildTonKhoGrid(y, m);
+  const tonCell = {};
+  if (d >= 1 && d <= tonKho.grid.length) {
+    const gr = tonKho.grid[d - 1];
+    tonKho.items.forEach((mh, i) => { tonCell[mh.id] = gr.cells[i]; });
+  }
+  const tonIds = new Set(tonKho.items.map(x => x.id));
+  const rows = buildPhieuRows(ngayYmd);
+
+  let totTonDau = 0, totMuaTT = 0, totCongNhapTT = 0, totXuatTT = 0, totXkTT = 0, totCongXuatTT = 0;
+  const out = rows.map(r => {
+    const isTcTon = r.mh && tonIds.has(r.mh.id);
+    const idKey = r.mh ? ('mh' + r.mh.id) : ('free-' + r.ten);
+    let gia, dec, tonDauSL, muaSL, tgsxSL, xuatSL, tonDauTT, muaTT, xuatTT;
+    if (r.is_tc) {
+      const item = getPhieuNhapItem(ngayYmd, r.mh.id);
+      gia = (item && item.donGia != null) ? +item.donGia : (+r.mh.gia || 0);
+      muaSL = item && item.soLuong != null ? +item.soLuong : 0;
+      tgsxSL = item && item.slTgsx != null ? +item.slTgsx : 0;
+      if (isTcTon) {
+        const cell = tonCell[r.mh.id] || { ton_dau: 0, xuat: 0, dec_sl: r.decimal ?? 1 };
+        dec = cell.dec_sl ?? (r.decimal ?? 1);
+        tonDauSL = cell.ton_dau || 0;
+        xuatSL = cell.xuat || 0;
+        xuatTT = xuatSL * gia;
+      } else {
+        dec = r.decimal ?? 2;
+        tonDauSL = 0; xuatSL = null; xuatTT = r.tt_dicho || 0;
+      }
+      tonDauTT = tonDauSL * gia;
+      muaTT = muaSL * gia;
+    } else {
+      dec = r.decimal ?? 1;
+      gia = +r.gia_dicho || 0;
+      tonDauSL = 0; muaSL = r.sl_dicho || 0; tgsxSL = 0; xuatSL = r.sl_dicho || 0;
+      tonDauTT = 0; muaTT = r.tt_dicho || 0; xuatTT = r.tt_dicho || 0;
+    }
+    const xkSL = getXuatKhacSo(ngayYmd, idKey);
+    const xkTT = gia != null ? xkSL * gia : 0;
+    const congNhapSL = muaSL + tgsxSL;
+    const congNhapTT = muaTT;            // TGSX không quy tiền
+    const congXuatSL = (xuatSL || 0) + xkSL;
+    const congXuatTT = xuatTT + xkTT;
+    totTonDau += tonDauTT; totMuaTT += muaTT; totCongNhapTT += congNhapTT;
+    totXuatTT += xuatTT; totXkTT += xkTT; totCongXuatTT += congXuatTT;
+    return {
+      ten: r.ten, dvt: r.dvt_disp || '', gia, dec, is_tc: !!r.is_tc, idKey,
+      tonDauSL, tonDauTT, muaSL, tgsxSL, muaTT, congNhapSL, congNhapTT,
+      xuatSL, xuatTT, xkSL, xkTT, congXuatSL, congXuatTT,
+    };
+  });
+  const totals = { totTonDau, totMuaTT, totCongNhapTT, totXuatTT, totXkTT, totCongXuatTT };
+
+  // ===== Công khai tài chính =====
+  const kt = _ntnKetToan(ngayYmd);
+  const tc1 = DATA.tieuChuan.find(x => x.id === 1) || { tienSang: 0, tienTrua: 0, tienChieu: 0 };
+  const thuS = kt.qsS * (tc1.tienSang || 0), thuT = kt.qsT * (tc1.tienTrua || 0), thuC = kt.qsC * (tc1.tienChieu || 0);
+  const congThuBua = thuS + thuT + thuC;
+  const anThem = Math.round(kt.tongThu - congThuBua);
+  const canDoiHomTruoc = _ntnCanDoiLuyKe(y, m, d - 1);
+  const thuaHomTruoc = canDoiHomTruoc >= 0 ? canDoiHomTruoc : 0;
+  const thieuHomTruoc = canDoiHomTruoc < 0 ? -canDoiHomTruoc : 0;
+  const congThu = congThuBua + thuaHomTruoc + anThem;
+  const tienDaSuDung = kt.tienTc + kt.daChiTp;
+  const congChi = tienDaSuDung + thieuHomTruoc;
+  const thuaTrongNgay = congThu - congChi;
+  const fin = { kt, tc1, thuS, thuT, thuC, congThuBua, anThem, thuaHomTruoc, thieuHomTruoc, congThu, tienDaSuDung, congChi, thuaTrongNgay };
+
+  return { y, m, d, rows: out, totals, fin, dv: DATA.cauHinh };
+}
+
+// Khung dòng "Công khai tài chính" (dùng chung render + Excel). Mỗi dòng = 6 ô.
+function _soNxFinSpecs(fin) {
+  const F = fin;
+  return [
+    { t: 'head',  label: 'THU' },
+    { t: 'plain', label: '- Mức (TC1):' },
+    { t: 'muc',   label: '+ Sáng:',  qs: F.kt.qsS, price: F.tc1.tienSang, amount: F.thuS },
+    { t: 'muc',   label: '+ Trưa:',  qs: F.kt.qsT, price: F.tc1.tienTrua, amount: F.thuT },
+    { t: 'muc',   label: '+ Chiều:', qs: F.kt.qsC, price: F.tc1.tienChieu, amount: F.thuC },
+    { t: 'sum',   label: 'Cộng:',           amount: F.congThuBua },
+    { t: 'sum',   label: 'Thừa hôm trước:', amount: F.thuaHomTruoc },
+    { t: 'sum',   label: 'Bù giá gạo:',     amount: 0 },
+    { t: 'sum',   label: 'Ăn thêm:',        amount: F.anThem },
+    { t: 'sum',   label: 'Truy lĩnh:',      amount: 0 },
+    { t: 'sum',   label: 'Thu của khách:',  amount: 0 },
+    { t: 'sum',   label: 'Cộng thu:',       amount: F.congThu, bold: true },
+    { t: 'head',  label: 'CHI' },
+    { t: 'sum',   label: '- Tiền đã sử dụng:', amount: F.tienDaSuDung },
+    { t: 'sum',   label: '- Thiếu hôm trước:', amount: F.thieuHomTruoc },
+    { t: 'sum',   label: 'Cộng chi:',          amount: F.congChi, bold: true },
+    { t: 'head',  label: 'SO SÁNH' },
+    { t: 'sum',   label: '- ' + (F.thuaTrongNgay >= 0 ? 'Thừa' : 'Thiếu') + ' trong ngày:', amount: Math.abs(F.thuaTrongNgay), bold: true },
+  ];
+}
+
 function renderSoNX() {
   _ensureSoNxCss();
   setSubtitle('Sổ theo dõi Nhập–Xuất LTTP–CĐ (1 ngày). Số Mua/TGSX nhập tay vào kho; tiêu chuẩn lấy từ Đi chợ.');
@@ -5174,144 +5226,65 @@ function renderSoNX() {
   const accSL = (n, dec) => { if (n == null) return '-'; const v = +n; if (!v) return '-'; const s = fmtN(Math.abs(v), dec); return v < 0 ? `<span class="neg">(${s})</span>` : s; };
   const accTT = (n) => { if (n == null) return '-'; const v = Math.round(+n); if (!v) return '-'; const s = fmt(Math.abs(v)); return v < 0 ? `<span class="neg">(${s})</span>` : s; };
 
-  // Tồn kho TC kg/L (tồn đầu/nhập/xuất theo ngày)
-  const tonKho = buildTonKhoGrid(y, m);
-  const tonCell = {};
-  if (d >= 1 && d <= tonKho.grid.length) {
-    const gr = tonKho.grid[d - 1];
-    tonKho.items.forEach((mh, i) => { tonCell[mh.id] = gr.cells[i]; });
-  }
-  const tonIds = new Set(tonKho.items.map(x => x.id));
-
-  // Danh sách dòng = TC (luôn hiện) + tươi/% có trong Đi chợ ngày đó
-  const rows = buildPhieuRows(SONX_DATE);
-  let totTonDau = 0, totMuaTT = 0, totCongNhapTT = 0, totXuatTT = 0, totCongXuatTT = 0;
+  // Số liệu dùng chung với xuất Excel
+  const B = _soNxBuild(SONX_DATE);
+  const T = B.totals;
 
   // ---- Dòng bên trái: sổ nhập-xuất (18 cột) ----
-  let totXkTT = 0;
-  const leftRows = rows.map((r, i) => {
-    const isTcTon = r.mh && tonIds.has(r.mh.id);   // TC kg/L có theo dõi tồn
-    const idKey = r.mh ? ('mh' + r.mh.id) : ('free-' + r.ten);
-    let gia, dec, tonDauSL, muaSL, tgsxSL, xuatSL, tonDauTT, muaTT, xuatTT;
-    if (r.is_tc) {
-      // TC (gồm cả % như dầu diezen, rửa bát, gia vị): NHẬP lấy từ "Nhập trong ngày"
-      // (Mua/TGSX/đơn giá), KHÔNG lấy từ Đi chợ.
-      const item = getPhieuNhapItem(SONX_DATE, r.mh.id);
-      gia = (item && item.donGia != null) ? +item.donGia : (+r.mh.gia || 0);
-      muaSL = item && item.soLuong != null ? +item.soLuong : 0;
-      tgsxSL = item && item.slTgsx != null ? +item.slTgsx : 0;
-      if (isTcTon) {                       // kg/L: có tồn kho, xuất = tiêu chuẩn (định lượng × QS)
-        const cell = tonCell[r.mh.id] || { ton_dau:0, xuat:0, dec_sl: r.decimal ?? 1 };
-        dec = cell.dec_sl ?? (r.decimal ?? 1);
-        tonDauSL = cell.ton_dau || 0;
-        xuatSL = cell.xuat || 0;
-        xuatTT = xuatSL * gia;
-      } else {                              // %: Xuất trong ngày → SL để trống, Thành tiền lấy từ Đi chợ
-        dec = r.decimal ?? 2;
-        tonDauSL = 0;
-        xuatSL = null;
-        xuatTT = r.tt_dicho || 0;
-      }
-      tonDauTT = tonDauSL * gia;
-      muaTT = muaSL * gia;
-    } else {
-      // Hàng tươi (ngoài tiêu chuẩn): lấy từ Đi chợ (nơi nhập tươi)
-      dec = r.decimal ?? 1;
-      gia = +r.gia_dicho || 0;
-      tonDauSL = 0; muaSL = r.sl_dicho || 0; tgsxSL = 0; xuatSL = r.sl_dicho || 0;
-      tonDauTT = 0; muaTT = r.tt_dicho || 0; xuatTT = r.tt_dicho || 0;
-    }
-    // Xuất khác (nhập tay) — chỉ cho hàng có đơn giá (không phải %)
-    const xkSL = getXuatKhacSo(SONX_DATE, idKey);
-    const xkTT = gia != null ? xkSL * gia : 0;
-    const congNhapSL = muaSL + tgsxSL;
-    const congNhapTT = muaTT;                       // TGSX không quy tiền
-    const congXuatSL = (xuatSL || 0) + xkSL;
-    const congXuatTT = xuatTT + xkTT;
-    totTonDau += tonDauTT; totMuaTT += muaTT; totCongNhapTT += congNhapTT; totXuatTT += xuatTT; totXkTT += xkTT; totCongXuatTT += congXuatTT;
-
-    const xkCell = (gia != null)
-      ? `<td class="num"><input type="number" step=".001" class="snx-xk" data-key="${idKey}" value="${xkSL || ''}" placeholder="-"></td>`
+  const leftRows = B.rows.map((R, i) => {
+    const xkCell = (R.gia != null)
+      ? `<td class="num"><input type="number" step=".001" class="snx-xk" data-key="${R.idKey}" value="${R.xkSL || ''}" placeholder="-"></td>`
       : `<td class="num">-</td>`;
     const html =
       `<td class="ctr">${i + 1}</td>`
-      + `<td class="name">${r.ten}</td>`
-      + `<td class="ctr">${r.dvt_disp || ''}</td>`
-      + `<td class="num">${gia != null && gia ? fmt(Math.round(gia)) : '-'}</td>`
-      + `<td class="num">${accSL(tonDauSL, dec)}</td>`
-      + `<td class="num">${accTT(tonDauTT)}</td>`
-      + `<td class="num">${accSL(muaSL, dec)}</td>`
-      + `<td class="num">${accSL(tgsxSL, dec)}</td>`
-      + `<td class="num">${accTT(muaTT)}</td>`
+      + `<td class="name">${R.ten}</td>`
+      + `<td class="ctr">${R.dvt || ''}</td>`
+      + `<td class="num">${R.gia ? fmt(Math.round(R.gia)) : '-'}</td>`
+      + `<td class="num">${accSL(R.tonDauSL, R.dec)}</td>`
+      + `<td class="num">${accTT(R.tonDauTT)}</td>`
+      + `<td class="num">${accSL(R.muaSL, R.dec)}</td>`
+      + `<td class="num">${accSL(R.tgsxSL, R.dec)}</td>`
+      + `<td class="num">${accTT(R.muaTT)}</td>`
       + `<td class="num">-</td>`
-      + `<td class="num">${accSL(congNhapSL, dec)}</td>`
-      + `<td class="num">${accTT(congNhapTT)}</td>`
-      + `<td class="num">${xuatSL == null ? '' : accSL(xuatSL, dec)}</td>`
-      + `<td class="num">${accTT(xuatTT)}</td>`
+      + `<td class="num">${accSL(R.congNhapSL, R.dec)}</td>`
+      + `<td class="num">${accTT(R.congNhapTT)}</td>`
+      + `<td class="num">${R.xuatSL == null ? '' : accSL(R.xuatSL, R.dec)}</td>`
+      + `<td class="num">${accTT(R.xuatTT)}</td>`
       + xkCell
-      + `<td class="num">${accTT(xkTT)}</td>`
-      + `<td class="num">${accSL(congXuatSL, dec)}</td>`
-      + `<td class="num">${accTT(congXuatTT)}</td>`;
-    return { html, tc: !!r.is_tc };
+      + `<td class="num">${accTT(R.xkTT)}</td>`
+      + `<td class="num">${accSL(R.congXuatSL, R.dec)}</td>`
+      + `<td class="num">${accTT(R.congXuatTT)}</td>`;
+    return { html, tc: !!R.is_tc };
   });
 
   // Dòng CỘNG (tổng các cột Thành tiền)
   const congHtml =
     `<td class="totc" colspan="5" style="text-align:center">CỘNG</td>`
-    + `<td class="totc num">${accTT(totTonDau)}</td>`
+    + `<td class="totc num">${accTT(T.totTonDau)}</td>`
     + `<td class="totc" colspan="2"></td>`
-    + `<td class="totc num">${accTT(totMuaTT)}</td>`
+    + `<td class="totc num">${accTT(T.totMuaTT)}</td>`
     + `<td class="totc"></td>`
     + `<td class="totc"></td>`
-    + `<td class="totc num">${accTT(totCongNhapTT)}</td>`
+    + `<td class="totc num">${accTT(T.totCongNhapTT)}</td>`
     + `<td class="totc"></td>`
-    + `<td class="totc num">${accTT(totXuatTT)}</td>`
+    + `<td class="totc num">${accTT(T.totXuatTT)}</td>`
     + `<td class="totc"></td>`
-    + `<td class="totc num">${accTT(totXkTT)}</td>`
+    + `<td class="totc num">${accTT(T.totXkTT)}</td>`
     + `<td class="totc"></td>`
-    + `<td class="totc num">${accTT(totXuatTT + totXkTT)}</td>`;
+    + `<td class="totc num">${accTT(T.totXuatTT + T.totXkTT)}</td>`;
   leftRows.push({ html: congHtml, tc:false, tot:true });
 
   // ===== Công khai tài chính (cột bên phải, cùng 1 bảng) =====
-  const kt = _ntnKetToan(SONX_DATE);
-  const tc1 = DATA.tieuChuan.find(x => x.id === 1) || { tienSang:0, tienTrua:0, tienChieu:0 };
-  const thuS = kt.qsS * (tc1.tienSang || 0), thuT = kt.qsT * (tc1.tienTrua || 0), thuC = kt.qsC * (tc1.tienChieu || 0);
-  const congThuBua = thuS + thuT + thuC;
-  const anThem = Math.round(kt.tongThu - congThuBua);
-  const canDoiHomTruoc = _ntnCanDoiLuyKe(y, m, d - 1);
-  const thuaHomTruoc = canDoiHomTruoc >= 0 ? canDoiHomTruoc : 0;
-  const thieuHomTruoc = canDoiHomTruoc < 0 ? -canDoiHomTruoc : 0;
-  const congThu = congThuBua + thuaHomTruoc + anThem;          // + bù giá gạo/truy lĩnh/thu khách (=0)
-  const tienDaSuDung = kt.tienTc + kt.daChiTp;
-  const congChi = tienDaSuDung + thieuHomTruoc;
-  const thuaTrongNgay = congThu - congChi;
   const M = n => fmt(Math.round(n || 0));
-
-  // 6 ô cho mỗi dòng tài chính
   const fH = t => `<td class="fin fh" colspan="6">${t}</td>`;
   const fPlain = t => `<td class="fin fl" colspan="6">${t}</td>`;
   const fMuc = (label, qs, price, amount) => `<td class="fin fl">${label}</td><td class="fin num">${qs || 0}</td><td class="fin ctr">×</td><td class="fin num">${M(price)}</td><td class="fin ctr">=</td><td class="fin num">${M(amount)}</td>`;
   const fSum = (label, amount, bold) => `<td class="fin fl${bold ? ' b' : ''}" colspan="4">${label}</td><td class="fin"></td><td class="fin num${bold ? ' b' : ''}">${amount == null ? '' : M(amount)}</td>`;
-  const finRows = [
-    fH('THU'),
-    fPlain('- Mức (TC1):'),
-    fMuc('+ Sáng:', kt.qsS, tc1.tienSang, thuS),
-    fMuc('+ Trưa:', kt.qsT, tc1.tienTrua, thuT),
-    fMuc('+ Chiều:', kt.qsC, tc1.tienChieu, thuC),
-    fSum('Cộng:', congThuBua),
-    fSum('Thừa hôm trước:', thuaHomTruoc),
-    fSum('Bù giá gạo:', 0),
-    fSum('Ăn thêm:', anThem),
-    fSum('Truy lĩnh:', 0),
-    fSum('Thu của khách:', 0),
-    fSum('Cộng thu:', congThu, true),
-    fH('CHI'),
-    fSum('- Tiền đã sử dụng:', tienDaSuDung),
-    fSum('- Thiếu hôm trước:', thieuHomTruoc),
-    fSum('Cộng chi:', congChi, true),
-    fH('SO SÁNH'),
-    fSum('- ' + (thuaTrongNgay >= 0 ? 'Thừa' : 'Thiếu') + ' trong ngày:', Math.abs(thuaTrongNgay), true),
-  ];
+  const finRows = _soNxFinSpecs(B.fin).map(s =>
+    s.t === 'head'  ? fH(s.label)
+    : s.t === 'plain' ? fPlain(s.label)
+    : s.t === 'muc'   ? fMuc(s.label, s.qs, s.price, s.amount)
+    :                   fSum(s.label, s.amount, s.bold));
 
   // Ghép trái + phải vào CÙNG 1 bảng
   const emptyLeft = '<td></td>'.repeat(18);
@@ -5378,64 +5351,162 @@ function renderSoNX() {
   });
 }
 
+// Xuất Excel Sổ Nhập–Xuất — GIỐNG HỆT giao diện: 18 cột sổ NX + 6 cột Công khai tài chính,
+// header gộp 3 tầng, định dạng kế toán (0 → "-", âm → trong ngoặc), dòng CỘNG, chữ ký.
 window.exportSoNxExcel = async function(ngayYmd) {
   try {
     await _ensureExcelJS();
-    const { y, m, d } = _ymdParse(ngayYmd);
-    const allItems = DATA.matHang.filter(mh => mh.dvt !== '%');
-    const lines = allItems.map(mh => {
-      let tonDau = 0;
-      for (let dd = 1; dd < d; dd++) {
-        tonDau += nhapKhoNgay(mh.id, dd) - xuatKhoNgay(mh.id, dd);
-      }
-      const nh = nhapKhoNgay(mh.id, d);
-      const xt = xuatKhoNgay(mh.id, d);
-      const ton = tonDau + nh - xt;
-      const active = nh > 0 || xt > 0 || tonDau !== 0 || mh.isTC;
-      return { mh, tonDau, nh, xt, ton, active };
-    }).filter(x => x.active);
-    const totalGT = lines.reduce((s, l) => s + l.ton * l.mh.gia, 0);
+    const B = _soNxBuild(ngayYmd);
+    const { y, m, d } = B;
+    const dv = B.dv || {};
+    const T = B.totals;
 
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('So NX');
-    const bold = { name:'Times New Roman', size:11, bold:true };
-    const boldBig = { name:'Times New Roman', size:14, bold:true };
-    const normal = { name:'Times New Roman', size:11 };
-    const center = { horizontal:'center', vertical:'middle', wrapText:true };
-    const right = { horizontal:'right', vertical:'middle' };
-    const left = { horizontal:'left', vertical:'middle' };
-    [26, 8, 11, 12, 11, 11, 12, 14].forEach((w, i) => ws.getColumn(i+1).width = w);
+    ws.views = [{ state: 'frozen', ySplit: 4 }];
+    const FNAME = 'Times New Roman';
+    const bold     = { name: FNAME, size: 10, bold: true };
+    const boldBig  = { name: FNAME, size: 14, bold: true };
+    const normal   = { name: FNAME, size: 10 };
+    const center   = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    const right    = { horizontal: 'right', vertical: 'middle' };
+    const left     = { horizontal: 'left', vertical: 'middle' };
+    const fillHdr  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+    const fillTot  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF2FF' } };
+    const fillTc   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBFDFF' } };
+    // Định dạng kế toán: dương | (âm) | 0→"-"
+    const MONEY = '#,##0;(#,##0);"-"';
+    const slFmt = dec => dec > 0 ? `#,##0.${'0'.repeat(dec)};(#,##0.${'0'.repeat(dec)});"-"` : MONEY;
+    const GIA = '#,##0;-#,##0;"-"';
 
-    let r = 1;
-    ws.getCell(r, 1).value = `SỔ NHẬP - XUẤT — Ngày ${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
-    ws.getCell(r, 1).font = boldBig; ws.getCell(r, 1).alignment = center;
-    ws.mergeCells(r, 1, r, 8);
-    r += 2;
-    ['Mặt hàng','ĐVT','Đơn giá','Tồn đầu','Nhập','Xuất','Tồn cuối','GT tồn (đ)'].forEach((h, i) => {
-      const c = ws.getCell(r, i+1);
-      c.value = h; c.font = bold; c.alignment = center; c.border = _XL_BORDER_ALL;
+    // 24 cột: 1-18 sổ NX, 19-24 tài chính
+    const widths = [4, 22, 6, 9, 8, 11, 8, 8, 11, 8, 8, 11, 8, 11, 8, 11, 8, 11, 15, 6, 3, 11, 3, 12];
+    widths.forEach((w, i) => ws.getColumn(i + 1).width = w);
+
+    const box = (t, l, b, r2) => { for (let rr = t; rr <= b; rr++) for (let cc = l; cc <= r2; cc++) ws.getCell(rr, cc).border = _XL_BORDER_ALL; };
+    const put = (rr, cc, val, { font = normal, align = right, fmt = null, fill = null } = {}) => {
+      const c = ws.getCell(rr, cc);
+      c.value = val; c.font = font; c.alignment = align; c.border = _XL_BORDER_ALL;
+      if (fmt) c.numFmt = fmt; if (fill) c.fill = fill;
+      return c;
+    };
+    const mput = (t, l, b, r2, val, opts = {}) => { ws.mergeCells(t, l, b, r2); put(t, l, val, opts); box(t, l, b, r2); };
+
+    // ---- Tiêu đề ----
+    if (dv.donVi) { ws.mergeCells(1, 1, 1, 24); const c = ws.getCell(1, 1); c.value = dv.donVi; c.font = bold; c.alignment = center; }
+    ws.mergeCells(2, 1, 2, 24);
+    const tCell = ws.getCell(2, 1);
+    tCell.value = `SỔ NHẬP - XUẤT NGÀY ${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+    tCell.font = boldBig; tCell.alignment = center;
+
+    // ---- Header 3 tầng (rows 4,5,6) ----
+    const H0 = 4;
+    const hOpt = { font: bold, align: center, fill: fillHdr };
+    mput(H0, 1, H0 + 2, 1, 'TT', hOpt);
+    mput(H0, 2, H0 + 2, 2, 'Tên LTTP-CĐ', hOpt);
+    mput(H0, 3, H0 + 2, 3, 'ĐVT', hOpt);
+    mput(H0, 4, H0 + 2, 4, 'Đơn giá', hOpt);
+    mput(H0, 5, H0 + 1, 6, 'Ngày trước chuyển qua', hOpt);
+    mput(H0, 7, H0, 10, 'Nhập trong ngày', hOpt);
+    mput(H0, 11, H0 + 1, 12, 'Cộng nhập', hOpt);
+    mput(H0, 13, H0 + 1, 14, 'Xuất trong ngày', hOpt);
+    mput(H0, 15, H0 + 1, 16, 'Xuất khác', hOpt);
+    mput(H0, 17, H0 + 1, 18, 'Cộng xuất', hOpt);
+    mput(H0, 19, H0 + 2, 24, `Công khai tài chính\n${ymdToDmy(ngayYmd)}`, hOpt);
+    // tầng 2 (row H0+1) cho "Nhập trong ngày"
+    mput(H0 + 1, 7, H0 + 1, 8, 'Số lượng', hOpt);
+    mput(H0 + 1, 9, H0 + 1, 10, 'Thành tiền', hOpt);
+    // tầng 3 (row H0+2)
+    const sub = (cc, t) => put(H0 + 2, cc, t, hOpt);
+    sub(5, 'SL'); sub(6, 'Thành tiền');
+    sub(7, 'Mua TT'); sub(8, 'TG CB'); sub(9, 'Mua TT'); sub(10, 'TG CB');
+    sub(11, 'SL'); sub(12, 'Thành tiền');
+    sub(13, 'SL'); sub(14, 'Thành tiền');
+    sub(15, 'SL'); sub(16, 'Thành tiền');
+    sub(17, 'SL'); sub(18, 'Thành tiền');
+
+    // ---- Thân: ghép trái (18) + phải (6) như giao diện ----
+    const finSpecs = _soNxFinSpecs(B.fin);
+    const N = Math.max(B.rows.length + 1, finSpecs.length);   // +1 cho dòng CỘNG
+    const startRow = H0 + 3;
+
+    for (let i = 0; i < N; i++) {
+      const rr = startRow + i;
+      // --- bên trái ---
+      if (i < B.rows.length) {
+        const R = B.rows[i];
+        const fill = R.is_tc ? fillTc : null;
+        put(rr, 1, i + 1, { align: center, fill });
+        put(rr, 2, R.ten, { align: left, fill });
+        put(rr, 3, R.dvt || '', { align: center, fill });
+        put(rr, 4, R.gia ? Math.round(R.gia) : null, { fmt: GIA, fill });
+        put(rr, 5, R.tonDauSL, { fmt: slFmt(R.dec), fill });
+        put(rr, 6, R.tonDauTT ? Math.round(R.tonDauTT) : 0, { fmt: MONEY, fill });
+        put(rr, 7, R.muaSL, { fmt: slFmt(R.dec), fill });
+        put(rr, 8, R.tgsxSL, { fmt: slFmt(R.dec), fill });
+        put(rr, 9, R.muaTT ? Math.round(R.muaTT) : 0, { fmt: MONEY, fill });
+        put(rr, 10, null, { fill });                                   // TG CB thành tiền (luôn -)
+        put(rr, 11, R.congNhapSL, { fmt: slFmt(R.dec), fill });
+        put(rr, 12, R.congNhapTT ? Math.round(R.congNhapTT) : 0, { fmt: MONEY, fill });
+        put(rr, 13, R.xuatSL == null ? null : R.xuatSL, { fmt: slFmt(R.dec), fill });
+        put(rr, 14, R.xuatTT ? Math.round(R.xuatTT) : 0, { fmt: MONEY, fill });
+        put(rr, 15, R.xkSL || null, { fmt: slFmt(R.dec), fill });
+        put(rr, 16, R.xkTT ? Math.round(R.xkTT) : 0, { fmt: MONEY, fill });
+        put(rr, 17, R.congXuatSL, { fmt: slFmt(R.dec), fill });
+        put(rr, 18, R.congXuatTT ? Math.round(R.congXuatTT) : 0, { fmt: MONEY, fill });
+      } else if (i === B.rows.length) {
+        // --- dòng CỘNG ---
+        mput(rr, 1, rr, 5, 'CỘNG', { font: bold, align: center, fill: fillTot });
+        put(rr, 6, Math.round(T.totTonDau), { font: bold, fmt: MONEY, fill: fillTot });
+        mput(rr, 7, rr, 8, null, { fill: fillTot });
+        put(rr, 9, Math.round(T.totMuaTT), { font: bold, fmt: MONEY, fill: fillTot });
+        put(rr, 10, null, { fill: fillTot });
+        put(rr, 11, null, { fill: fillTot });
+        put(rr, 12, Math.round(T.totCongNhapTT), { font: bold, fmt: MONEY, fill: fillTot });
+        put(rr, 13, null, { fill: fillTot });
+        put(rr, 14, Math.round(T.totXuatTT), { font: bold, fmt: MONEY, fill: fillTot });
+        put(rr, 15, null, { fill: fillTot });
+        put(rr, 16, Math.round(T.totXkTT), { font: bold, fmt: MONEY, fill: fillTot });
+        put(rr, 17, null, { fill: fillTot });
+        put(rr, 18, Math.round(T.totXuatTT + T.totXkTT), { font: bold, fmt: MONEY, fill: fillTot });
+      } else {
+        box(rr, 1, rr, 18);   // ô trống vẫn kẻ khung
+      }
+
+      // --- bên phải (tài chính) ---
+      const s = finSpecs[i];
+      if (!s) { box(rr, 19, rr, 24); continue; }
+      if (s.t === 'head') {
+        mput(rr, 19, rr, 24, s.label, { font: bold, align: center, fill: fillTot });
+      } else if (s.t === 'plain') {
+        mput(rr, 19, rr, 24, s.label, { font: normal, align: left });
+      } else if (s.t === 'muc') {
+        put(rr, 19, s.label, { font: normal, align: left });
+        put(rr, 20, s.qs || 0, { font: normal, align: center });
+        put(rr, 21, '×', { font: normal, align: center });
+        put(rr, 22, Math.round(s.price || 0), { font: normal, fmt: '#,##0' });
+        put(rr, 23, '=', { font: normal, align: center });
+        put(rr, 24, Math.round(s.amount || 0), { font: normal, fmt: '#,##0' });
+      } else { // sum
+        const f = s.bold ? bold : normal;
+        mput(rr, 19, rr, 22, s.label, { font: f, align: left });
+        put(rr, 23, null, {});
+        put(rr, 24, s.amount == null ? null : Math.round(s.amount), { font: f, fmt: '#,##0' });
+      }
+    }
+
+    // ---- Chữ ký ----
+    const signRow = startRow + N + 1;
+    const roles = [['Quản lý đơn vị', dv.quanLy], ['Trực ban', dv.trucBan], ['Chỉ huy đơn vị', dv.chiHuy]];
+    const spans = [[1, 8], [9, 16], [17, 24]];
+    roles.forEach((rl, i) => {
+      const [c1, c2] = spans[i];
+      ws.mergeCells(signRow, c1, signRow, c2);
+      const rc = ws.getCell(signRow, c1); rc.value = rl[0]; rc.font = bold; rc.alignment = center;
+      ws.mergeCells(signRow + 3, c1, signRow + 3, c2);
+      const nc = ws.getCell(signRow + 3, c1); nc.value = rl[1] || ''; nc.font = bold; nc.alignment = center;
     });
-    r++;
-    lines.forEach(L => {
-      const dec = L.mh.decimal ?? 1;
-      const numFmt = `#,##0.${'0'.repeat(dec)}`;
-      [L.mh.ten, L.mh.dvt, L.mh.gia, L.tonDau, L.nh, L.xt, L.ton, Math.round(L.ton * L.mh.gia)].forEach((v, i) => {
-        const c = ws.getCell(r, i+1);
-        c.value = v; c.font = normal; c.border = _XL_BORDER_ALL;
-        c.alignment = (i === 0) ? left : (i === 1 ? center : right);
-      });
-      ws.getCell(r, 3).numFmt = '#,##0';
-      [4, 5, 6, 7].forEach(c => ws.getCell(r, c).numFmt = numFmt);
-      ws.getCell(r, 8).numFmt = '#,##0';
-      r++;
-    });
-    ws.getCell(r, 1).value = 'Tổng giá trị tồn';
-    ws.getCell(r, 1).font = bold;
-    ws.mergeCells(r, 1, r, 7);
-    ws.getCell(r, 1).alignment = right;
-    ws.getCell(r, 8).value = Math.round(totalGT);
-    ws.getCell(r, 8).font = bold; ws.getCell(r, 8).numFmt = '#,##0'; ws.getCell(r, 8).alignment = right;
-    for (let c = 1; c <= 8; c++) ws.getCell(r, c).border = _XL_BORDER_ALL;
+
     await _xlsxDownload(wb, `SoNX_${ngayYmd}.xlsx`);
   } catch (e) {
     alert('Lỗi xuất Excel: ' + (e.message || e));
