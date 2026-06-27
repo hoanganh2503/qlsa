@@ -23,7 +23,7 @@
     --c-primary-hover: #4338ca;
     --c-primary-soft: #eef2ff;
     --c-success: #10b981;
-    --c-success-soft: #ecfdf5;§
+    --c-success-soft: #ecfdf5;
     --c-warning: #f59e0b;
     --c-warning-soft: #fffbeb;
     --c-danger: #ef4444;
@@ -339,7 +339,7 @@
   <aside class="sidebar">
     <div class="brand">
       <div class="logo">Q</div>
-      <div class="name">QLSA CSV <small>Lưu trữ CSV</small></div>
+      <div class="name">QLSA CSV <small>bản TGSX • ngày dd/mm/yyyy</small></div>
     </div>
     <div class="nav-scroll" id="nav">
       <div class="nav-group">
@@ -584,7 +584,7 @@ const TC_DINH_LUONG_NGAY = [
   { stt: 14, ten: 'Rau xanh',         dvt: 'g/người/ngày', dl: 400, ma: 'RAU',   mhMa:'RAU',   nhom: 'menu',  note: 'Quy rau củ các loại' },
   { stt: 15, ten: 'Hoa quả tươi',     dvt: 'g/người/ngày', dl: 300, ma: 'HQ',    mhMa:'HQ',    nhom: 'menu',  note: 'Hoa quả tráng miệng' },
   { stt: 16, ten: 'Gia vị',           dvt: '% tiền ăn',    dl: 3,   ma: 'GVI',   mhMa:'GVI',   nhom: 'pct',   note: '3% tiền ăn bữa, tròn nghìn' },
-  { stt: 17, ten: 'Chất đốt',         dvt: 'g/người/ngày', dl: 800, ma: 'GAS',   mhMa:'GAS',   nhom: 'auto',  note: 'Quy chất đốt (gas, dầu, củi)' },
+  { stt: 17, ten: 'Dầu diezen',       dvt: 'g/người/ngày', dl: 800, ma: 'GAS',   mhMa:'GAS',   nhom: 'auto',  note: 'Quy chất đốt (gas, dầu, củi)' },
 ];
 
 const TC_NHIET_LUONG = 3200; // Kcal/người/ngày — chuẩn 4 TC
@@ -595,7 +595,7 @@ const TC_NHIET_LUONG = 3200; // Kcal/người/ngày — chuẩn 4 TC
 const TC_BANG_DEFAULT = [
   { stt:1,  ten:'Tiền ăn',     dvt:'Đồng', mhMa:null,    gia:null,   cells:[14400,28800,28800,72000,  19600,39200,39200,98000,  23400,46800,46800,117000,  0,0,0,0] },
   { stt:2,  ten:'Gạo',         dvt:'Kg',   mhMa:'GAO',   gia:13140,  cells:[0.136,0.272,0.272,0.68,   0.18,0.25,0.25,0.68,      0.18,0.25,0.25,0.68,        0.18,0.25,0.25,0.68] },
-  { stt:3,  ten:'Chất đốt',    dvt:'%',    mhMa:'GAS',   gia:27800,  cells:[0.05,0.05,0.05,0.05,      0.01,0.02,0.02,0.058,     0.0116,0.0232,0.0232,0.058, 0.0116,0.0232,0.0232,0.058] },
+  { stt:3,  ten:'Dầu diezen',  dvt:'%',    mhMa:'GAS',   gia:27800,  cells:[0.05,0.05,0.05,0.05,      0.01,0.02,0.02,0.058,     0.0116,0.0232,0.0232,0.058, 0.0116,0.0232,0.0232,0.058] },
   { stt:4,  ten:'Mắm',         dvt:'Lít',  mhMa:'MAM',   gia:22000,  cells:[0.006,0.012,0.012,0.03,   0.006,0.012,0.012,0.03,   0.006,0.012,0.012,0.03,     0.006,0.012,0.012,0.03] },
   { stt:5,  ten:'Muối',        dvt:'Kg',   mhMa:'MUOI',  gia:5000,   cells:[0.004,0.008,0.008,0.02,   0.006,0.012,0.012,0.03,   0.006,0.012,0.012,0.03,     0.006,0.012,0.012,0.03] },
   { stt:6,  ten:'Mì chính',    dvt:'Kg',   mhMa:'MICH',  gia:55000,  cells:[0.0004,0.0008,0.0008,0.002, 0.0004,0.0008,0.0008,0.002, 0.0004,0.0008,0.0008,0.002, 0.0004,0.0008,0.0008,0.002] },
@@ -691,6 +691,8 @@ const DEFAULT_DATA = () => ({
   thucDon: {},  // key = "YYYY-MM-DD" → { S: [{monId, dl}], T: [...], C: [...] }
   diCho: {},    // key = "YYYY-MM-DD" → { S/T/C: { qs, anThem, items:[{mhId,sl}] } }
   nhapTrongNgay: [],  // [{ id, ngay, maPhieu, mhId, soLuong, donGia, thanhTien, ghiChu }]
+  canDoiDauKy: {},    // key = `${nam}_${thang}` → cân đối chuyển sang từ kỳ trước (đồng)
+  ngayBatDauKy: {},   // key = `${nam}_${thang}` → ngày bắt đầu hoạch toán trong tháng (1..31)
   phanHo: [
     { nguoiId:1, kh1:true, kh2:false, kh3:true, kh4:false },
     { nguoiId:2, kh1:true, kh2:true,  kh3:false, kh4:true },
@@ -710,11 +712,31 @@ function loadData() {
     return JSON.parse(raw);
   } catch (e) { return DEFAULT_DATA(); }
 }
-function saveData() { localStorage.setItem(STORE_KEY, JSON.stringify(DATA)); }
+// Trạng thái tự-lưu-ra-file (khai báo SỚM để saveData lúc khởi động không lỗi TDZ)
+let AUTOSAVE_HANDLE = null, _autoSaveTimer = null, _autoSaveStatus = 'off', _autoSaveStamp = null;
+const FS_DB = 'qlsa_fs', FS_STORE = 'handles', FS_KEY = 'backup';
+
+function saveData() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(DATA));
+  if (typeof _autoSaveToFile === 'function') _autoSaveToFile(); // tự ghi ra file đã liên kết (nếu có)
+}
 function nextId(list) { return list.length ? Math.max(...list.map(x => +x.id || 0)) + 1 : 1; }
 DATA = loadData();
 // Migrate older snapshots (thiếu mặt hàng % hoặc diCho)
 if (!DATA.diCho) DATA.diCho = {};
+// Giảm số dòng nhập tay Đi chợ 20 → 10: cắt dòng trống thừa ở cuối, giữ lại dòng đã nhập
+Object.values(DATA.diCho).forEach(day => {
+  if (!day) return;
+  ['S','T','C'].forEach(b => {
+    const fi = day[b] && day[b].freeItems;
+    if (!Array.isArray(fi)) return;
+    while (fi.length > 10) {
+      const last = fi[fi.length - 1];
+      if (last && ((last.ten || '').trim() !== '' || +last.sl || +last.gia)) break;
+      fi.pop();
+    }
+  });
+});
 ['DDIEZ','DRB','GVI'].forEach(ma => {
   if (DATA.matHang.some(m => m.ma === ma)) return;
   const seed = { DDIEZ:{id:8,ten:'Dầu diezen',nhom:'CD'}, DRB:{id:9,ten:'Dầu rửa bát',nhom:'GV'}, GVI:{id:18,ten:'Gia vị',nhom:'GV'} }[ma];
@@ -724,6 +746,10 @@ if (!DATA.diCho) DATA.diCho = {};
 if (DATA.nhapTrongNgay && DATA.nhapTrongNgay.length) {
   DATA.nhapTrongNgay = DATA.nhapTrongNgay.filter(g => !(g.maPhieu && /^DC/.test(g.maPhieu)));
 }
+// Cân đối chuyển sang từ kỳ trước (snapshot cũ chưa có)
+if (!DATA.canDoiDauKy) DATA.canDoiDauKy = {};
+// Ngày bắt đầu hoạch toán theo kỳ (snapshot cũ chưa có) — mặc định ngày 1
+if (!DATA.ngayBatDauKy) DATA.ngayBatDauKy = {};
 // Seed Định lượng tiêu chuẩn theo ngày vào DATA (snapshot cũ chưa có hoặc thiếu mhMa)
 if (!Array.isArray(DATA.dinhLuongChuan) || !DATA.dinhLuongChuan.length || !DATA.dinhLuongChuan[0].mhMa) {
   DATA.dinhLuongChuan = TC_DINH_LUONG_NGAY.map(x => ({ ...x }));
@@ -742,6 +768,27 @@ if (!DATA.pctMuc) DATA.pctMuc = { DDIEZ:5, DRB:1, GVI:3 };
 if (!Array.isArray(DATA.tcBang) || !DATA.tcBang.length) {
   DATA.tcBang = JSON.parse(JSON.stringify(TC_BANG_DEFAULT));
 }
+// Đổi tên hiển thị "Chất đốt" → "Dầu diezen" cho khớp Đi chợ (kể cả dữ liệu cũ đã lưu)
+(DATA.tcBang || []).forEach(r => { if (r.ten === 'Chất đốt') r.ten = 'Dầu diezen'; });
+(DATA.dinhLuongChuan || []).forEach(r => { if (r.ten === 'Chất đốt') r.ten = 'Dầu diezen'; });
+// Đồng bộ pctMuc theo bảng Tiêu chuẩn (kể cả snapshot cũ) — để % không bị "đứng yên"
+_syncPctMucFromTcBang();
+// CHỐT đơn giá (gia) + định lượng (dl/dec) cho dữ liệu Đi chợ ngày cũ chưa có.
+// Gán theo giá + định lượng chuẩn HIỆN TẠI → số tiền không đổi so với bây giờ,
+// nhưng từ nay đổi giá/định lượng chuẩn không làm sai các ngày cũ. (chạy sau khi đã seed dinhLuongBua/pctMuc)
+Object.values(DATA.diCho).forEach(day => {
+  if (!day) return;
+  ['S','T','C'].forEach(b => {
+    (day[b] && day[b].items || []).forEach(it => {
+      const mh = DATA.matHang.find(m => m.id === it.mhId);
+      if (it.gia == null) it.gia = mh ? (+mh.gia || 0) : 0;
+      if (it.dl == null && mh) {
+        const snap = dichoSnapDL(mh.ma, b);
+        it.dl = snap.dl; it.dec = snap.dec;
+      }
+    });
+  });
+});
 // Seed thêm quân số mock cho đủ 124 để test (chỉ pad, không xoá ai)
 if (DATA.cauHinh.quanSo < 124) DATA.cauHinh.quanSo = 124;
 while (DATA.nguoiAn.length < 124) {
@@ -756,6 +803,8 @@ while (DATA.nguoiAn.length < 124) {
   });
 }
 saveData();
+// Khôi phục liên kết file tự lưu (nếu lần trước đã bật) — async, không chặn khởi động
+if (typeof restoreAutoSaveHandle === 'function') restoreAutoSaveHandle();
 
 // ============================================================
 // HELPERS
@@ -773,6 +822,54 @@ const fmt = n => (n == null || isNaN(n)) ? '0' : Number(n).toLocaleString('vi-VN
 const fmtN = (n,d=1) => (n == null || isNaN(n)) ? '0' : Number(n).toLocaleString('vi-VN', { minimumFractionDigits:d, maximumFractionDigits:d });
 const fmtD = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 const ymdToDmy = ymd => { if (!ymd) return ''; const [y,m,d] = ymd.split('-'); return `${d}/${m}/${y}`; };
+// "dd/mm/yyyy" -> "yyyy-mm-dd" (trả '' nếu không hợp lệ). Cho phép d/m/yyyy.
+const dmyToYmd = dmy => {
+  if (!dmy) return '';
+  const m = String(dmy).trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if (!m) return '';
+  const d = +m[1], mo = +m[2], y = +m[3];
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+  return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+};
+// Ô chọn ngày hiển thị dd/mm/yyyy: text (dd/mm/yyyy) + input date ẩn (giữ id & value YYYY-MM-DD cho calendar).
+// Các handler cũ vẫn đọc getElementById(id).value (YYYY-MM-DD) như bình thường.
+function dateInputHtml(id, ymd, extraStyle = '') {
+  const baseStyle = `padding:6px 10px;border:1px solid var(--c-border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;width:118px;${extraStyle}`;
+  return `<span class="date-vn" style="position:relative;display:inline-flex;align-items:center;gap:4px">`
+    + `<input type="text" class="date-vn-disp" data-for="${id}" value="${ymd ? ymdToDmy(ymd) : ''}" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10" style="${baseStyle}">`
+    + `<input type="date" id="${id}" class="date-vn-native" value="${ymd || ''}" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;padding:0;margin:0;opacity:0;pointer-events:none;left:0;bottom:0">`
+    + `<button type="button" class="date-vn-btn" data-for="${id}" title="Chọn ngày" style="border:1px solid var(--c-border);background:#fff;border-radius:var(--radius-sm);padding:5px 8px;cursor:pointer;font-size:13px;line-height:1">📅</button>`
+    + `</span>`;
+}
+// Đăng ký 1 lần: đồng bộ text dd/mm/yyyy <-> input date ẩn (event delegation, an toàn với re-render).
+function _initDateVn() {
+  if (window.__dateVnInit) return;
+  window.__dateVnInit = true;
+  const nativeOf = el => document.getElementById(el.dataset.for);
+  const openPicker = nat => { if (!nat) return; try { nat.showPicker(); } catch (_) { nat.focus(); nat.click(); } };
+  // mở lịch khi bấm nút 📅 hoặc focus vào ô text
+  document.addEventListener('click', e => {
+    const btn = e.target.closest && e.target.closest('.date-vn-btn');
+    if (btn) { e.preventDefault(); openPicker(nativeOf(btn)); }
+  });
+  // chọn từ lịch -> cập nhật text + kích hoạt onchange cũ của input date
+  document.addEventListener('change', e => {
+    const t = e.target;
+    if (t.classList && t.classList.contains('date-vn-native')) {
+      const span = t.closest('.date-vn');
+      const disp = span && span.querySelector('.date-vn-disp');
+      if (disp) disp.value = ymdToDmy(t.value);
+      return;
+    }
+    if (t.classList && t.classList.contains('date-vn-disp')) {
+      const nat = nativeOf(t);
+      if (!nat) return;
+      const ymd = dmyToYmd(t.value);
+      if (ymd) { nat.value = ymd; t.value = ymdToDmy(ymd); nat.dispatchEvent(new Event('change', { bubbles: true })); }
+      else { t.value = ymdToDmy(nat.value); } // nhập sai -> trả lại giá trị cũ
+    }
+  });
+}
 const getTC = id => DATA.tieuChuan.find(x => x.id === id);
 const getMH = id => DATA.matHang.find(x => x.id === id);
 const getMon = id => DATA.monAn.find(x => x.id === id);
@@ -896,7 +993,7 @@ function nhapKhoNgay(mhId, ngay) {
   DATA.nhapTrongNgay.forEach(g => {
     if (g.mhId !== mhId || g.ngay !== dkey) return;
     if (g.maPhieu && g.maPhieu.startsWith('DC')) return; // bỏ entries import cũ
-    nh += +g.soLuong || 0;
+    nh += (+g.soLuong || 0) + (+g.slTgsx || 0); // Mua + TGSX đều vào kho
   });
   return nh;
 }
@@ -1173,9 +1270,9 @@ const CSV_TABLES = {
   nhap_trong_ngay: {
     label: 'Nhập trong ngày (giao dịch tiếp phẩm)',
     file: 'nhap_trong_ngay.csv',
-    fields: ['id','ngay','maPhieu','mhId','soLuong','donGia','thanhTien','ghiChu'],
-    schema: { id:'int', ngay:'str', maPhieu:'str', mhId:'int', soLuong:'num', donGia:'num', thanhTien:'num', ghiChu:'str' },
-    get: () => DATA.nhapTrongNgay.map(r => pickFields(r, ['id','ngay','maPhieu','mhId','soLuong','donGia','thanhTien','ghiChu'])),
+    fields: ['id','ngay','maPhieu','mhId','soLuong','slTgsx','donGia','thanhTien','ghiChu'],
+    schema: { id:'int', ngay:'str', maPhieu:'str', mhId:'int', soLuong:'num', slTgsx:'num', donGia:'num', thanhTien:'num', ghiChu:'str' },
+    get: () => DATA.nhapTrongNgay.map(r => pickFields(r, ['id','ngay','maPhieu','mhId','soLuong','slTgsx','donGia','thanhTien','ghiChu'])),
     set: (rows) => { DATA.nhapTrongNgay = castRows(rows, CSV_TABLES.nhap_trong_ngay.schema); }
   },
   phan_ho: {
@@ -1300,6 +1397,118 @@ async function importAllJson(file) {
 }
 
 // ============================================================
+// TỰ ĐỘNG LƯU RA FILE (File System Access API — Chrome/Edge)
+// Liên kết 1 file .json một lần → mọi thay đổi tự ghi vào file đó (lưu lâu dài).
+// (Biến trạng thái AUTOSAVE_HANDLE/_autoSaveStatus… đã khai báo sớm gần saveData)
+// ============================================================
+function autoSaveSupported() { return typeof window !== 'undefined' && 'showSaveFilePicker' in window; }
+
+function _idb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(FS_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(FS_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function _idbPut(k, v) { const db = await _idb(); return new Promise((res, rej) => { const tx = db.transaction(FS_STORE, 'readwrite'); tx.objectStore(FS_STORE).put(v, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); }
+async function _idbGet(k) { const db = await _idb(); return new Promise((res, rej) => { const tx = db.transaction(FS_STORE, 'readonly'); const r = tx.objectStore(FS_STORE).get(k); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function _idbDel(k) { const db = await _idb(); return new Promise((res) => { const tx = db.transaction(FS_STORE, 'readwrite'); tx.objectStore(FS_STORE).delete(k); tx.oncomplete = () => res(); }); }
+
+async function _fsPerm(handle, request) {
+  if (!handle || !handle.queryPermission) return 'granted';
+  const opts = { mode: 'readwrite' };
+  let p = await handle.queryPermission(opts);
+  if (p !== 'granted' && request && handle.requestPermission) p = await handle.requestPermission(opts);
+  return p;
+}
+async function _writeHandle(handle) {
+  const w = await handle.createWritable();
+  await w.write(new Blob([JSON.stringify(DATA)], { type: 'application/json' }));
+  await w.close();
+}
+
+// Gọi từ saveData() — ghi (debounce) vào file đã liên kết
+function _autoSaveToFile() {
+  if (!AUTOSAVE_HANDLE || _autoSaveStatus !== 'linked') return;
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(async () => {
+    try { await _writeHandle(AUTOSAVE_HANDLE); _autoSaveStamp = new Date(); }
+    catch (e) { _autoSaveStatus = 'error'; console.warn('Auto-save lỗi:', e); }
+    _updateAutoSaveBadge();
+  }, 800);
+}
+
+function _autoSaveStatusHtml() {
+  const name = AUTOSAVE_HANDLE ? AUTOSAVE_HANDLE.name : '';
+  const t = _autoSaveStamp ? _autoSaveStamp.toLocaleTimeString('vi-VN') : '';
+  switch (_autoSaveStatus) {
+    case 'linked':   return `<span style="color:#16a34a">● Đang tự lưu vào <strong>${name}</strong></span>${t?` <span class="muted">— lần cuối ${t}</span>`:''}`;
+    case 'reconnect':return `<span style="color:#d97706">● Đã có file <strong>${name}</strong> nhưng cần cấp lại quyền — bấm “Kết nối lại”.</span>`;
+    case 'error':    return `<span style="color:#dc2626">● Lỗi ghi file — kiểm tra quyền hoặc liên kết lại.</span>`;
+    case 'unsupported': return `<span class="muted">Trình duyệt này không hỗ trợ tự lưu ra file. Dùng <strong>Chrome</strong> hoặc <strong>Edge</strong> (hoặc dùng nút Sao lưu/Khôi phục JSON bên dưới).</span>`;
+    default:         return `<span class="muted">Chưa bật. Bấm “Liên kết file tự lưu”, chọn 1 file .json để lưu lâu dài.</span>`;
+  }
+}
+function _updateAutoSaveBadge() { const el = document.getElementById('autosave-status'); if (el) el.innerHTML = _autoSaveStatusHtml(); }
+
+async function linkAutoSaveFile() {
+  if (!autoSaveSupported()) { alert('Trình duyệt này không hỗ trợ tự lưu ra file. Hãy dùng Chrome hoặc Edge.'); return; }
+  try {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: 'qlsa_data.json',
+      types: [{ description: 'QLSA dữ liệu', accept: { 'application/json': ['.json'] } }],
+    });
+    AUTOSAVE_HANDLE = handle; _autoSaveStatus = 'linked';
+    await _idbPut(FS_KEY, handle);
+    await _writeHandle(handle); _autoSaveStamp = new Date();
+    if (typeof renderSaoLuuCsv === 'function') renderSaoLuuCsv();
+    alert('Đã liên kết file tự lưu:\n' + handle.name + '\nTừ giờ mọi thay đổi sẽ tự ghi vào file này.');
+  } catch (e) { if (e && e.name === 'AbortError') return; alert('Không liên kết được file: ' + (e && e.message)); }
+}
+
+async function openFromFile() {
+  if (!autoSaveSupported()) { alert('Trình duyệt không hỗ trợ. Dùng nút “Khôi phục JSON” bên dưới.'); return; }
+  try {
+    const [handle] = await window.showOpenFilePicker({ types: [{ description: 'QLSA dữ liệu', accept: { 'application/json': ['.json'] } }] });
+    const file = await handle.getFile();
+    const obj = JSON.parse(await file.text());
+    if (!confirm('Nạp dữ liệu từ "' + handle.name + '" và GHI ĐÈ dữ liệu hiện tại? Đồng thời liên kết tự lưu vào file này.')) return;
+    DATA = obj; AUTOSAVE_HANDLE = handle; _autoSaveStatus = 'linked';
+    await _idbPut(FS_KEY, handle);
+    saveData();
+    alert('Đã nạp dữ liệu và liên kết tự lưu: ' + handle.name);
+    location.reload();
+  } catch (e) { if (e && e.name === 'AbortError') return; alert('Không nạp được file: ' + (e && e.message)); }
+}
+
+async function unlinkAutoSaveFile() {
+  AUTOSAVE_HANDLE = null; _autoSaveStatus = 'off'; _autoSaveStamp = null;
+  await _idbDel(FS_KEY);
+  if (typeof renderSaoLuuCsv === 'function') renderSaoLuuCsv();
+}
+
+async function reconnectAutoSave() {
+  if (!AUTOSAVE_HANDLE) return;
+  const perm = await _fsPerm(AUTOSAVE_HANDLE, true);
+  if (perm === 'granted') { _autoSaveStatus = 'linked'; try { await _writeHandle(AUTOSAVE_HANDLE); _autoSaveStamp = new Date(); } catch (e) {} }
+  if (typeof renderSaoLuuCsv === 'function') renderSaoLuuCsv();
+}
+
+// Khôi phục handle khi mở app (cần user bấm “Kết nối lại” để cấp lại quyền)
+async function restoreAutoSaveHandle() {
+  if (!autoSaveSupported()) { _autoSaveStatus = 'unsupported'; _updateAutoSaveBadge(); return; }
+  try {
+    const handle = await _idbGet(FS_KEY);
+    if (!handle) { _autoSaveStatus = 'off'; _updateAutoSaveBadge(); return; }
+    AUTOSAVE_HANDLE = handle;
+    const perm = await _fsPerm(handle, false);
+    _autoSaveStatus = (perm === 'granted') ? 'linked' : 'reconnect';
+  } catch (e) { _autoSaveStatus = 'off'; }
+  _updateAutoSaveBadge();
+}
+
+// ============================================================
 // RENDER: trang "Sao lưu CSV"
 // ============================================================
 function renderSaoLuuCsv() {
@@ -1320,7 +1529,30 @@ function renderSaoLuuCsv() {
     </tr>`;
   }).join('');
 
+  const asReconnectBtn = _autoSaveStatus === 'reconnect'
+    ? `<button class="btn btn-warning" onclick="reconnectAutoSave()">🔌 Kết nối lại &amp; cấp quyền</button>` : '';
+  const asUnlinkBtn = AUTOSAVE_HANDLE
+    ? `<button class="btn btn-outline-secondary" onclick="unlinkAutoSaveFile()">Ngắt tự lưu</button>` : '';
+
   document.getElementById('page-body').innerHTML = `
+    <div class="card" style="margin-bottom:14px;border:2px solid #2563eb">
+      <div class="card-body">
+        <h6 style="margin:0 0 8px">💾 Tự động lưu ra file — khuyên dùng để lưu LÂU DÀI</h6>
+        <div id="autosave-status" style="font-size:13px;margin-bottom:10px">${_autoSaveStatusHtml()}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          ${asReconnectBtn}
+          <button class="btn btn-primary" onclick="linkAutoSaveFile()">📌 ${AUTOSAVE_HANDLE ? 'Đổi file tự lưu' : 'Liên kết file tự lưu'}</button>
+          <button class="btn btn-outline-primary" onclick="openFromFile()">📂 Mở dữ liệu từ file (máy mới / khôi phục)</button>
+          ${asUnlinkBtn}
+        </div>
+        <p class="muted" style="font-size:12px;margin:10px 0 0">
+          Chọn 1 file <code>.json</code> để lưu lâu dài → mọi thay đổi tự ghi vào file đó (đầy đủ, không mất Đi chợ).
+          Đổi máy / cài lại Windows: copy file đó sang, mở app rồi bấm <strong>“Mở dữ liệu từ file”</strong>.
+          Chỉ chạy trên <strong>Chrome/Edge</strong>; mở app bằng cách bấm đúp <code>index.html</code>.
+        </p>
+      </div>
+    </div>
+
     <div class="card" style="margin-bottom:14px">
       <div class="card-body">
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
@@ -1625,6 +1857,21 @@ window.tieuChuanSeedDinhLuong = function() {
   alert(`Đã nạp lại ${DATA.tcBang.length} dòng Tiêu chuẩn từ Excel. Đi chợ + Mặt hàng đã đồng bộ.`);
 };
 
+// Sync các dòng ĐVT '%' của bảng Tiêu chuẩn -> DATA.pctMuc (Đi chợ đọc pctMuc).
+// Ô bảng lưu dạng phân số (0.03 = 3%) -> nhân 100 thành "số phần trăm" pctMuc cần.
+// Lưu ý lệch mã: dòng "Chất đốt" trong bảng dùng mhMa='GAS', còn Đi chợ dùng 'DDIEZ'.
+function _syncPctMucFromTcBang() {
+  if (!Array.isArray(DATA.tcBang)) return;
+  if (!DATA.pctMuc) DATA.pctMuc = {};
+  const map = { GAS: 'DDIEZ' }; // chất đốt: bảng=GAS, đi chợ=DDIEZ
+  DATA.tcBang.forEach(r => {
+    if (r.dvt !== '%' || !r.mhMa) return;
+    const key = map[r.mhMa] || r.mhMa;
+    const tong = +r.cells[3] || 0;               // ô Tổng của TC1 (phân số)
+    DATA.pctMuc[key] = Math.round(tong * 100 * 1e6) / 1e6;
+  });
+}
+
 // Sync tcBang -> tieuChuan (row Tiền ăn) và dinhLuongBua (cho Đi chợ)
 function _syncTcBangDownstream() {
   if (!DATA.tcBang) return;
@@ -1658,6 +1905,8 @@ function _syncTcBangDownstream() {
     const mh = DATA.matHang.find(m => m.ma === r.mhMa);
     if (mh) mh.gia = +r.gia || 0;
   });
+  // Các dòng ĐVT '%' → pctMuc (Đi chợ) — phần trước đây bị bỏ sót khiến % không đổi
+  _syncPctMucFromTcBang();
 }
 
 function renderTieuChuan() {
@@ -1710,7 +1959,7 @@ function renderTieuChuan() {
   document.getElementById('page-body').innerHTML = `
     <div class="banner banner-i">
       <span class="b-ico">ⓘ</span>
-      <div>Bảng <strong>Tiêu chuẩn</strong> y hệt Excel: 11 dòng × 4 TC (S/T/C/Tổng) + Giá. Sửa ô nào → auto lưu, tự đồng bộ giá Mặt hàng + Đi chợ.</div>
+      <div>Bảng <strong>Tiêu chuẩn</strong> y hệt Excel: 11 dòng × 4 TC (S/T/C/Tổng) + Giá. Sửa ô nào → auto lưu, tự đồng bộ giá Mặt hàng + Đi chợ. <strong>Mẹo:</strong> chỉ cần nhập ô <strong>Tổng</strong>, hệ thống tự chia Sáng/Trưa/Chiều theo tỉ lệ <span class="code">2-4-4</span> (dòng ĐVT <span class="code">%</span> giữ nguyên).</div>
     </div>
 
     <div class="card-x">
@@ -1759,9 +2008,22 @@ function renderTieuChuan() {
       const ri = +e.target.dataset.ri;
       const idx = +e.target.dataset.idx;
       const val = e.target.value === '' ? null : (+e.target.value);
-      DATA.tcBang[ri].cells[idx] = val;
+      const row = DATA.tcBang[ri];
+      row.cells[idx] = val;
+      // Nhập ô Tổng (cột 4 của mỗi TC) → tự chia Sáng/Trưa/Chiều theo tỉ lệ 2-4-4.
+      // Riêng dòng ĐVT '%' giữ nguyên S/T/C (không chia).
+      let autofilled = false;
+      if (idx % 4 === 3 && row.dvt !== '%' && val != null) {
+        const base = idx - 3;
+        const r6 = x => Math.round(x * 1e6) / 1e6;
+        row.cells[base]     = r6(val * 0.2); // Sáng
+        row.cells[base + 1] = r6(val * 0.4); // Trưa
+        row.cells[base + 2] = r6(val * 0.4); // Chiều
+        autofilled = true;
+      }
       _syncTcBangDownstream();
       saveData();
+      if (autofilled) { renderTieuChuan(); return; } // vẽ lại để hiện S/T/C vừa chia
       e.target.style.background = '#ecfdf5';
       setTimeout(() => e.target.style.background = '', 600);
     };
@@ -2326,7 +2588,7 @@ document.getElementById('tdm-save').onclick = () => {
 let DICHO_DATE = null;
 const DICHO_TC_ITEMS = ['GAO','VLAC','DAU','MAM','MUOI','MICH','DDIEZ','DRB','GVI'];
 const DICHO_DEFAULT_PCT = { DDIEZ:5, DRB:1, GVI:3 };
-const DICHO_FREE_ROWS = 20;  // số dòng trống mặc định mỗi bữa cho user tự nhập tên/SL/giá
+const DICHO_FREE_ROWS = 10;  // số dòng trống mặc định mỗi bữa cho user tự nhập tên/SL/giá (bấm + để thêm)
 
 function dichoTienBuaTC1(bua) {
   const tc1 = DATA.tieuChuan.find(x => x.id === 1);
@@ -2360,6 +2622,20 @@ function dichoDefaultSL(ma, qs, bua) {
   return roundExcel(dl * qs, tcDL.dec ?? 1);
 }
 
+// Chốt ĐỊNH LƯỢNG/bữa của 1 mặt hàng TC (để lưu vào ngày Đi chợ).
+// Trả { dl, dec }: % → dl = mức %, dec 2; thường → dl = g/người/bữa, dec làm tròn.
+function dichoSnapDL(ma, bua) {
+  const mh = DATA.matHang.find(m => m.ma === ma);
+  if (!mh) return { dl: 0, dec: 1 };
+  if (mh.dvt === '%') {
+    const pct = (DATA.pctMuc && DATA.pctMuc[ma] != null) ? +DATA.pctMuc[ma] : (DICHO_DEFAULT_PCT[ma] || 0);
+    return { dl: pct, dec: 2 };
+  }
+  const tcDL = (DATA.dinhLuongBua && DATA.dinhLuongBua[ma]) || TC_DINH_LUONG[ma];
+  if (!tcDL) return { dl: 0, dec: 1 };
+  return { dl: tcDL.dl[bua==='S'?0:bua==='T'?1:2] || 0, dec: tcDL.dec ?? 1 };
+}
+
 function _emptyFreeRows() {
   return Array.from({length: DICHO_FREE_ROWS}, () => ({ ten:'', sl:0, gia:0 }));
 }
@@ -2374,7 +2650,10 @@ function dichoInitDay(ngay) {
     DICHO_TC_ITEMS.forEach(ma => {
       const mh = DATA.matHang.find(m => m.ma === ma);
       if (!mh) return;
-      day[b].items.push({ mhId: mh.id, sl: dichoDefaultSL(ma, day[b].qs, b) });
+      // Chốt đơn giá (gia) + định lượng (dl/dec) ngay lúc tạo ngày —
+      // đổi giá/định lượng chuẩn sau này KHÔNG ảnh hưởng ngày cũ.
+      const snap = dichoSnapDL(ma, b);
+      day[b].items.push({ mhId: mh.id, sl: dichoDefaultSL(ma, day[b].qs, b), gia: +mh.gia || 0, dl: snap.dl, dec: snap.dec });
     });
   });
   DATA.diCho[ngay] = day;
@@ -2396,7 +2675,7 @@ function _ensureFreeRows(day) {
       }
     });
     day[b].items = stillTC;
-    // Pad to 20
+    // Đảm bảo tối thiểu DICHO_FREE_ROWS dòng (chỉ thêm, không cắt — để dòng bấm + giữ nguyên)
     while (day[b].freeItems.length < DICHO_FREE_ROWS) day[b].freeItems.push({ ten:'', sl:0, gia:0 });
   });
 }
@@ -2406,10 +2685,17 @@ function dichoItemGia(item) {
   if (!mh || mh.dvt === '%') return 0;
   return item.gia != null ? +item.gia : +mh.gia;
 }
-// SL hiệu lực: TC → auto theo ĐL × QS bữa (không lưu); non-TC → user nhập
+// SL hiệu lực: TC → ĐL đã chốt × QS bữa hiện tại (đổi ĐL chuẩn KHÔNG ảnh hưởng ngày cũ);
+// non-TC → user nhập. Nếu ngày chưa chốt ĐL (item.dl null) thì fallback tính theo chuẩn hiện tại.
 function dichoItemSL(item, qs, bua) {
   const mh = getMH(item.mhId);
-  if (mh && DICHO_TC_ITEMS.includes(mh.ma)) return dichoDefaultSL(mh.ma, qs, bua);
+  if (mh && DICHO_TC_ITEMS.includes(mh.ma)) {
+    if (item.dl != null) {
+      if (mh.dvt === '%') return +item.dl;                  // % : SL = mức % đã chốt
+      return roundExcel(+item.dl * qs, item.dec ?? 1);      // SL = ĐL đã chốt × QS hiện tại
+    }
+    return dichoDefaultSL(mh.ma, qs, bua);
+  }
   return +item.sl || 0;
 }
 function dichoRowTien(item, sl, congBua) {
@@ -2419,8 +2705,43 @@ function dichoRowTien(item, sl, congBua) {
   return roundMoney(+sl * dichoItemGia(item));
 }
 
+// Thừa/thiếu (cân đối) RIÊNG 1 ngày theo Đi chợ = (Σ thu bữa + ăn thêm) − tổng chi đi chợ.
+// KHÔNG gồm thừa/thiếu hôm trước (phần luỹ kế cộng riêng ở _dichoCanDoiLuyKe).
+function _dichoThuaThieuNgay(ngayYmd) {
+  const day = (DATA.diCho || {})[ngayYmd];
+  if (!day) return 0;   // ngày chưa nhập (vd trước ngày bắt đầu) → 0
+  let tongThu = 0, tongChi = 0, tongAnThem = 0;
+  ['S','T','C'].forEach(b => {
+    const qs = +day[b].qs || 0;
+    const cong = qs * dichoTienBuaTC1(b);
+    tongThu += cong;
+    tongAnThem += +day[b].anThem || 0;
+    (day[b].items || []).forEach(it => {
+      const sl = dichoItemSL(it, qs, b);
+      tongChi += dichoRowTien(it, sl, cong);
+    });
+    (day[b].freeItems || []).forEach(it => {
+      const sl = +it.sl || 0, gia = +it.gia || 0;
+      if (sl > 0 && gia > 0) tongChi += roundMoney(sl * gia);
+    });
+  });
+  return (tongThu + tongAnThem) - tongChi;
+}
+
+// Thừa/thiếu hôm trước (luỹ kế Đi chợ) = cân đối đầu kỳ + Σ thừa/thiếu từng ngày tới hết throughDay.
+// Ngày chưa nhập không có DATA.diCho → đóng góp 0 (vd bắt đầu nhập từ ngày 13 thì ngày 12 = 0).
+function _dichoCanDoiLuyKe(nam, thang, throughDay) {
+  let acc = getCanDoiDauKy(nam, thang);
+  const start = getNgayBatDau(nam, thang);   // bỏ qua các ngày trước ngày bắt đầu hoạch toán
+  for (let i = start; i <= throughDay; i++) {
+    const ymd = `${nam}-${String(thang).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+    acc += _dichoThuaThieuNgay(ymd);
+  }
+  return acc;
+}
+
 function renderDiCho() {
-  setSubtitle('Lập danh sách đi chợ theo từng bữa — 9 mặt hàng TC tự sinh theo TC1 × QS, dưới có 20 dòng trống cho bạn tự nhập Tên / SL / Giá tươi.');
+  setSubtitle('Lập danh sách đi chợ theo từng bữa — 9 mặt hàng TC tự sinh theo TC1 × QS, dưới có 10 dòng trống (bấm ＋ để thêm) cho bạn tự nhập Tên / SL / Giá tươi.');
   if (!DATA.diCho) DATA.diCho = {};
 
   if (!DICHO_DATE) {
@@ -2438,7 +2759,7 @@ function renderDiCho() {
 
   setActions(`
     <label class="small text-muted" style="margin:0 6px 0 0">Ngày</label>
-    <input type="date" id="dc-date" value="${ngay}" style="padding:6px 10px;border:1px solid var(--c-border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit">
+    ${dateInputHtml('dc-date', ngay)}
     <button class="btn-x" id="dc-reset" title="Reset SL các mặt hàng tiêu chuẩn về ĐL × QS">↻ Reset TC</button>
     <button class="btn-x btn-p" id="dc-export" title="Xuất file Excel theo form Đi chợ ngày">⬇ Xuất Excel</button>
   `);
@@ -2476,7 +2797,7 @@ function renderDiCho() {
   ['S','T','C'].forEach(b => {
     calc[b].rows.forEach(r => {
       const k = 'mh-' + r.it.mhId;
-      if (!agg[k]) agg[k] = { ten: r.mh.ten + (r.isPct?' (%)':''), decimal: r.mh.decimal, isPct: r.isPct, sl:0, tt:0 };
+      if (!agg[k]) agg[k] = { ten: r.mh.ten, decimal: r.mh.decimal, isPct: r.isPct, sl:0, tt:0 };
       agg[k].sl += +r.sl || 0;
       agg[k].tt += r.tt;
     });
@@ -2496,43 +2817,11 @@ function renderDiCho() {
   const tongAnThem = (+day.S.anThem||0) + (+day.T.anThem||0) + (+day.C.anThem||0);
   const tongChi = calc.S.chi + calc.T.chi + calc.C.chi;
 
-  // Định mức TC theo ngày — tính kg cần + tiền ước từ DATA.dinhLuongChuan × QS × giá matHang
-  const qsNgay = Math.max(+calc.S.qs||0, +calc.T.qs||0, +calc.C.qs||0);
-  const dmList = (DATA.dinhLuongChuan || TC_DINH_LUONG_NGAY);
-  let dmTongTien = 0;
-  const dmRows = dmList.map(it => {
-    const mh = DATA.matHang.find(m => m.ma === it.mhMa);
-    if (it.nhom === 'pct') {
-      const tienGV = roundToUnit((+it.dl/100) * tongThuBua, 1000);
-      dmTongTien += tienGV;
-      return `<tr>
-        <td class="num">${it.stt}</td>
-        <td><strong>${it.ten}</strong></td>
-        <td><span class="code">${mh?mh.dvt:'%'}</span></td>
-        <td class="num">${it.dl}%</td>
-        <td class="num">${qsNgay}</td>
-        <td class="num text-muted">— ${it.dl}% × thu —</td>
-        <td class="num">${mh?fmt(mh.gia):'—'}</td>
-        <td class="num"><strong>${fmt(tienGV)}</strong></td>
-      </tr>`;
-    }
-    const kgCan = roundExcel((+it.dl * qsNgay) / 1000, mh?.decimal ?? 2);
-    const gia = mh ? +mh.gia || 0 : 0;
-    const tienUoc = roundMoney(kgCan * gia);
-    if (mh) dmTongTien += tienUoc;
-    return `<tr>
-      <td class="num">${it.stt}</td>
-      <td><strong>${it.ten}</strong></td>
-      <td><span class="code">${mh?mh.dvt:'?'}</span></td>
-      <td class="num">${it.dl}</td>
-      <td class="num">${qsNgay}</td>
-      <td class="num"><strong>${fmtN(kgCan, mh?.decimal ?? 2)}</strong></td>
-      <td class="num">${mh ? fmt(gia) : '<span class="text-muted">chưa có MH</span>'}</td>
-      <td class="num"><strong>${mh ? fmt(tienUoc) : '—'}</strong></td>
-    </tr>`;
-  }).join('');
-
-  const ttTruoc = 0; // chưa nối tháng trước trong demo
+  // Thừa/thiếu hôm trước = cân đối luỹ kế Đi chợ (gồm cân đối đầu kỳ) đến hết ngày liền trước
+  const { y: _ttY, m: _ttM, d: _ttD } = _ymdParse(ngay);
+  const startDay = getNgayBatDau(_ttY, _ttM);
+  const ngayTruocHT = _ttD < startDay;   // đang xem ngày trước ngày bắt đầu hoạch toán
+  const ttTruoc = _dichoCanDoiLuyKe(_ttY, _ttM, _ttD - 1);
   const tongThu = tongThuBua + tongAnThem + ttTruoc;
   const ttNgay = tongThu - tongChi;
 
@@ -2544,8 +2833,8 @@ function renderDiCho() {
       const slDec = r.isPct ? 2 : (r.mh.decimal ?? 1);
       const giaCell = r.isPct
         ? '<span class="text-muted small">—</span>'
-        : `<span title="Giá cố định từ Mặt hàng">${fmt(r.mh.gia)}</span>`;
-      const slCell = `<span class="dc-sl-auto" title="Tự tính: ${r.isPct?'mức %':'ĐL × QS = '+(TC_DINH_LUONG[r.mh.ma]?.dl[b==='S'?0:b==='T'?1:2]||'?')+' × '+data.qs}">${fmtN(+r.sl, slDec)}</span>`;
+        : `<span title="Đơn giá đã chốt cho ngày này (đổi giá Mặt hàng không ảnh hưởng)">${fmt(dichoItemGia(r.it))}</span>`;
+      const slCell = `<span class="dc-sl-auto" title="${r.isPct?'mức % đã chốt':'ĐL đã chốt × QS = '+(r.it.dl ?? '?')+' × '+data.qs+' (đổi ĐL chuẩn không ảnh hưởng ngày này)'}">${fmtN(+r.sl, slDec)}</span>`;
       return `<tr class="dc-tc-row">
         <td>${r.mh.ten}${r.isPct?' <span class="pill pill-m" style="font-size:9.5px;padding:0 5px">%</span>':''}</td>
         <td class="num">${giaCell}</td>
@@ -2554,7 +2843,7 @@ function renderDiCho() {
       </tr>`;
     }).join('');
 
-    // 20 dòng free-form (user tự nhập Tên / Giá / SL / auto Thành tiền)
+    // 10 dòng free-form (user tự nhập Tên / Giá / SL / auto Thành tiền) — bấm + để thêm
     const freeRowsHtml = data.freeRows.map(r => `<tr class="dc-free-row">
         <td><input type="text" class="dc-free-ten" value="${(r.it.ten||'').replace(/"/g,'&quot;')}" data-bua="${b}" data-fidx="${r.idx}" placeholder="..."></td>
         <td class="num"><input type="number" step="100" class="dc-free-gia" value="${r.gia || ''}" data-bua="${b}" data-fidx="${r.idx}" placeholder="0"></td>
@@ -2583,6 +2872,7 @@ function renderDiCho() {
         <tbody>${tcRowsHtml}${freeRowsHtml}</tbody>
         <tfoot><tr><td colspan="3">Cộng chi</td><td class="num"><strong>${fmt(data.chi)}</strong></td></tr></tfoot>
       </table>
+      <div style="padding:6px 4px"><button class="btn-x btn-x-sm dc-add-free" data-bua="${b}" title="Thêm 1 dòng nhập mặt hàng tươi">＋ Thêm dòng</button></div>
     </div>`;
   };
 
@@ -2590,7 +2880,7 @@ function renderDiCho() {
     const slDec = x.isPct ? 2 : (x.decimal ?? 1);
     const dg = x.sl > 0 ? x.tt / x.sl : 0;
     return `<tr>
-      <td>${x.ten}</td>
+      <td>${x.ten}${x.isPct?' <span class="pill pill-m" style="font-size:9.5px;padding:0 5px">%</span>':''}</td>
       <td class="num">${fmtN(x.sl, slDec)}</td>
       <td class="num"><strong>${fmt(x.tt)}</strong></td>
       <td class="num text-muted">${fmtN(dg, 1)}</td>
@@ -2600,36 +2890,9 @@ function renderDiCho() {
   document.getElementById('page-body').innerHTML = `
     <div class="banner banner-i">
       <span class="b-ico">⚡</span>
-      <div><strong>Đi chợ chia 3 bữa S/T/C.</strong> 9 mặt hàng <strong>tiêu chuẩn</strong> (gạo, vừng lạc, dầu, mắm, muối, mì chính, dầu diezen %, dầu rửa bát % = 1%, gia vị %): SL tự tính theo ĐL × QS bữa — đổi QS, SL tự cập nhật. Dưới có <strong>20 dòng trống</strong>/bữa cho bạn tự gõ Tên / Giá / SL của mặt hàng tươi (thịt/cá/rau), thành tiền nhân ra tự động.</div>
+      <div><strong>Đi chợ chia 3 bữa S/T/C.</strong> 9 mặt hàng <strong>tiêu chuẩn</strong> (gạo, vừng lạc, dầu, mắm, muối, mì chính, dầu diezen %, dầu rửa bát % = 1%, gia vị %): SL tự tính theo ĐL × QS bữa — đổi QS, SL tự cập nhật. Dưới có <strong>10 dòng trống</strong>/bữa (bấm <strong>＋ Thêm dòng</strong> nếu thiếu) cho bạn tự gõ Tên / Giá / SL của mặt hàng tươi (thịt/cá/rau), thành tiền nhân ra tự động.</div>
     </div>
     <div class="dc-grid">${['S','T','C'].map(buaCol).join('')}</div>
-
-    <div class="card-x" style="margin-top:18px">
-      <div class="card-x-head">
-        <h3>Định mức tiêu chuẩn theo ngày — gợi ý đi chợ (${qsNgay} người)</h3>
-        <span class="pill pill-i">Tổng ước: ${fmt(dmTongTien)} đ</span>
-      </div>
-      <div class="card-x-body p-0">
-        <table class="t t-compact"><thead><tr>
-          <th class="num">STT</th>
-          <th>Mặt hàng</th>
-          <th>ĐVT</th>
-          <th class="num">ĐL/người</th>
-          <th class="num">QS ngày</th>
-          <th class="num">Cần mua</th>
-          <th class="num">Giá (đ)</th>
-          <th class="num">Tiền ước (đ)</th>
-        </tr></thead><tbody>${dmRows}</tbody>
-        <tfoot><tr><td colspan="7" style="text-align:right"><strong>Tổng ước tính:</strong></td><td class="num"><strong>${fmt(dmTongTien)}</strong></td></tr></tfoot>
-        </table>
-      </div>
-      <div class="card-x-body" style="border-top:1px solid var(--c-border);padding:10px 16px;background:#f8fafc">
-        <div class="text-muted" style="font-size:12px">
-          <strong>Công thức:</strong> <span class="code">Cần mua (kg/lít) = ĐL × QS / 1000</span> · <span class="code">Tiền ước = Cần mua × Giá MH</span> · Gia vị: <span class="code">3% × Tổng thu (tròn nghìn)</span>.
-          QS ngày = max(QS S, QS T, QS C). Số liệu lấy từ <strong>Tab Tiêu chuẩn ăn</strong> (DATA.dinhLuongChuan).
-        </div>
-      </div>
-    </div>
 
     <div class="card-x" style="margin-top:18px">
       <div class="card-x-head"><h3>Bảng tổng kê — gộp 3 bữa (đối soát)</h3>
@@ -2646,6 +2909,12 @@ function renderDiCho() {
     <div class="card-x">
       <div class="card-x-head"><h3>Kết toán ngày ${ymdToDmy(ngay)}</h3></div>
       <div class="card-x-body p-0">
+        <div style="padding:10px 12px;border-bottom:1px solid var(--c-border,#e5e7eb);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span title="Từ ngày này mới bắt đầu tính số dư & tồn kho (gạo, gas, mắm, muối…). Các ngày trước bị bỏ qua.">📅 <strong>Ngày bắt đầu hoạch toán</strong> (tháng ${String(_ttM).padStart(2,'0')}/${_ttY})</span>
+          <input type="number" id="dc-start-day" min="1" max="31" value="${startDay}" style="width:70px" title="Nhập 1 nếu tính từ đầu tháng">
+          <span class="text-muted small">— trước ngày này: số dư & tồn kho = 0 / giữ nguyên đầu kỳ.</span>
+        </div>
+        ${ngayTruocHT ? `<div style="padding:8px 12px;background:#fff7ed;color:#9a3412;font-size:12px">⚠ Ngày ${String(_ttD).padStart(2,'0')} nằm <strong>trước</strong> ngày bắt đầu hoạch toán (${String(startDay).padStart(2,'0')}) — ngày này không được cộng vào số dư luỹ kế.</div>` : ''}
         <table class="t dc-summary-card">
           <tr><td>Thu trong ngày (cộng 3 bữa = QS×TC1)</td><td class="num">${fmt(tongThuBua)}</td></tr>
           <tr><td>Ăn thêm</td><td class="num">${fmt(tongAnThem)}</td></tr>
@@ -2673,6 +2942,13 @@ Thừa/thiếu  = Tổng thu − Tổng chi</div>
 
   // Wire
   document.getElementById('dc-date').onchange = e => { DICHO_DATE = e.target.value; if (!DATA.diCho[DICHO_DATE]) dichoInitDay(DICHO_DATE); renderDiCho(); };
+  document.getElementById('dc-start-day').onchange = e => {
+    let v = Math.round(+e.target.value || 1);
+    const maxD = new Date(_ttY, _ttM, 0).getDate();
+    v = Math.min(Math.max(v, 1), maxD);
+    setNgayBatDau(_ttY, _ttM, v);
+    renderDiCho();
+  };
   document.getElementById('dc-reset').onclick = () => window.dichoResetTC();
   document.getElementById('dc-export').onclick = () => window.dichoExportExcel();
   document.querySelectorAll('.dc-qs').forEach(inp => inp.onchange = e => {
@@ -2701,10 +2977,16 @@ Thừa/thiếu  = Tổng thu − Tổng chi</div>
     DATA.diCho[ngay][b].freeItems[idx].gia = +e.target.value || 0;
     saveData(); renderDiCho();
   });
+  // Bấm + để thêm 1 dòng nhập tay cho bữa tương ứng
+  document.querySelectorAll('.dc-add-free').forEach(btn => btn.onclick = e => {
+    const b = e.target.dataset.bua;
+    DATA.diCho[ngay][b].freeItems.push({ ten:'', sl:0, gia:0 });
+    saveData(); renderDiCho();
+  });
 }
 
 window.dichoResetTC = function() {
-  if (!confirm('Đặt lại SL các mặt hàng tiêu chuẩn (gạo, mắm, muối, mì chính, dầu, vừng lạc, dầu diezen %, dầu RB %, gia vị %) về ĐL × QS bữa?\nMặt hàng tươi (thịt, cá, rau...) bạn thêm sẽ giữ lại.')) return;
+  if (!confirm('Đặt lại SL các mặt hàng tiêu chuẩn về ĐL × QS bữa, VÀ cập nhật đơn giá theo giá Mặt hàng hiện tại cho ngày này?\nMặt hàng tươi (thịt, cá, rau...) bạn thêm sẽ giữ lại.')) return;
   const ngay = DICHO_DATE;
   const day = DATA.diCho[ngay];
   if (!day) return;
@@ -2716,7 +2998,9 @@ window.dichoResetTC = function() {
     });
     const tcItems = DICHO_TC_ITEMS.map(ma => {
       const mh = DATA.matHang.find(m => m.ma === ma);
-      return mh ? { mhId: mh.id, sl: dichoDefaultSL(ma, qs, b) } : null;
+      if (!mh) return null;
+      const snap = dichoSnapDL(ma, b);
+      return { mhId: mh.id, sl: dichoDefaultSL(ma, qs, b), gia: +mh.gia || 0, dl: snap.dl, dec: snap.dec };
     }).filter(Boolean);
     day[b].items = [...tcItems, ...keep];
   });
@@ -2876,7 +3160,8 @@ window.dichoExportExcel = function() {
   const tongThuBua = calc.S.cong + calc.T.cong + calc.C.cong;
   const tongAnThem = (+day.S.anThem||0) + (+day.T.anThem||0) + (+day.C.anThem||0);
   const tongChi = calc.S.chi + calc.T.chi + calc.C.chi;
-  const ttTruoc = 0;
+  const { y: _ttY, m: _ttM, d: _ttD } = _ymdParse(ngay);
+  const ttTruoc = _dichoCanDoiLuyKe(_ttY, _ttM, _ttD - 1);
   const tongThu = tongThuBua + tongAnThem + ttTruoc;
   const ttNgay = tongThu - tongChi;
 
@@ -3145,10 +3430,11 @@ function savePhieuNhapItem(ngayYmd, mhId, fields) {
   let item = getPhieuNhapItem(ngayYmd, mhId);
   const mh = getMH(mhId);
   if (!item) {
-    item = { id: nextId(DATA.nhapTrongNgay), ngay: ngayYmd, maPhieu: `N${ngayYmd.slice(8)}`, mhId, soLuong: null, donGia: null, thanhTien: 0, ghiChu: '' };
+    item = { id: nextId(DATA.nhapTrongNgay), ngay: ngayYmd, maPhieu: `N${ngayYmd.slice(8)}`, mhId, soLuong: null, slTgsx: null, donGia: null, thanhTien: 0, ghiChu: '' };
     DATA.nhapTrongNgay.push(item);
   }
   if ('sl' in fields) item.soLuong = fields.sl === '' ? null : (+fields.sl);
+  if ('tgsx' in fields) item.slTgsx = fields.tgsx === '' ? null : (+fields.tgsx);
   if ('gia' in fields) item.donGia = fields.gia === '' ? null : (+fields.gia);
   if ('ghiChu' in fields) item.ghiChu = fields.ghiChu;
   item.thanhTien = roundMoney((+item.soLuong || 0) * (+item.donGia || 0));
@@ -3178,6 +3464,35 @@ function setChuyenSang(nam, thang, mhId, ton) {
   const key = `${nam}_${thang}_${mhId}`;
   if (!ton) delete DATA.tonChuyenThang[key];
   else DATA.tonChuyenThang[key] = +ton;
+  saveData();
+}
+
+// Cân đối chuyển sang từ kỳ trước (cho Kết toán Nhập trong ngày)
+function getCanDoiDauKy(nam, thang) {
+  if (!DATA.canDoiDauKy) return 0;
+  return +DATA.canDoiDauKy[`${nam}_${thang}`] || 0;
+}
+function setCanDoiDauKy(nam, thang, val) {
+  if (!DATA.canDoiDauKy) DATA.canDoiDauKy = {};
+  const key = `${nam}_${thang}`;
+  if (!val) delete DATA.canDoiDauKy[key];
+  else DATA.canDoiDauKy[key] = +val;
+  saveData();
+}
+
+// Ngày bắt đầu hoạch toán trong tháng (1..31). Từ ngày này mới tính số dư + tồn kho;
+// các ngày trước đó bị bỏ qua (vd chỉ bắt đầu nhập từ ngày 13). Mặc định = 1.
+function getNgayBatDau(nam, thang) {
+  if (!DATA.ngayBatDauKy) return 1;
+  const v = +DATA.ngayBatDauKy[`${nam}_${thang}`];
+  return (v >= 1 && v <= 31) ? v : 1;
+}
+function setNgayBatDau(nam, thang, day) {
+  if (!DATA.ngayBatDauKy) DATA.ngayBatDauKy = {};
+  const key = `${nam}_${thang}`;
+  const d = +day;
+  if (!d || d <= 1) delete DATA.ngayBatDauKy[key];   // 1 = mặc định, không cần lưu
+  else DATA.ngayBatDauKy[key] = d;
   saveData();
 }
 
@@ -3276,6 +3591,7 @@ function buildTonKhoGrid(nam, thang) {
   });
 
   const soNgay = new Date(nam, thang, 0).getDate();
+  const startDay = getNgayBatDau(nam, thang);   // ngày bắt đầu hoạch toán: trước đó không tính nhập/xuất
   const chuyenSang = {};
   items.forEach(mh => { chuyenSang[mh.id] = getChuyenSang(nam, thang, mh.id); });
 
@@ -3288,7 +3604,7 @@ function buildTonKhoGrid(nam, thang) {
     const p = _ymdParse(n.ngay);
     if (p.y !== nam || p.m !== thang) return;
     if (!nhapMap[n.mhId]) return;
-    nhapMap[n.mhId][p.d] = (nhapMap[n.mhId][p.d] || 0) + (+n.soLuong || 0);
+    nhapMap[n.mhId][p.d] = (nhapMap[n.mhId][p.d] || 0) + (+n.soLuong || 0) + (+n.slTgsx || 0);
   });
 
   // Xuất ngày = Σ ROUND(ĐL TC1 bữa × QS Đi chợ bữa, dec)
@@ -3319,10 +3635,11 @@ function buildTonKhoGrid(nam, thang) {
   const grid = [];
   for (let d = 1; d <= soNgay; d++) {
     const cells = [];
+    const before = d < startDay;   // ngày trước khi bắt đầu hoạch toán → không nhập/xuất
     items.forEach(mh => {
       const tonDau = curTon[mh.id];
-      const nh = +nhapMap[mh.id][d] || 0;
-      const xt = xuatTcNgay(mh, d);
+      const nh = before ? 0 : (+nhapMap[mh.id][d] || 0);
+      const xt = before ? 0 : xuatTcNgay(mh, d);
       const tonCuoi = tonDau + nh - xt;
       curTon[mh.id] = tonCuoi;
       nhapTotal[mh.id] += nh;
@@ -3368,8 +3685,99 @@ const _XL_BORDER_ALL = { top: _XL_THIN, left: _XL_THIN, bottom: _XL_THIN, right:
 // SECTION: NHAP TRONG NGAY — y Django dicho/nhap_trong_ngay.html
 // ============================================================
 let NTN_DATE = null;
+
+// CSS riêng cho bảng Nhập trong ngày — chèn 1 lần
+function _ensureNtnCss() {
+  if (document.getElementById('ntn-style')) return;
+  const s = document.createElement('style');
+  s.id = 'ntn-style';
+  s.textContent = `
+    .ntn-layout { display:grid; grid-template-columns: minmax(0,1fr) 300px; gap:16px; align-items:start; }
+    @media (max-width:1180px) { .ntn-layout { grid-template-columns:1fr; } }
+    .ntn-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .ntn-table th, .ntn-table td { border:1px solid var(--c-border); padding:5px 8px; vertical-align:middle; }
+    .ntn-table thead th { background:#f8fafc; font-weight:700; text-align:center; white-space:nowrap; }
+    .ntn-table td.num, .ntn-table th.num { text-align:right; font-variant-numeric:tabular-nums; }
+    .ntn-table td.center { text-align:center; }
+    .ntn-table tbody tr.tc-row td { background:#fbfdff; }
+    .ntn-table tbody tr.free-row td { background:#fff; color:#475569; }
+    .ntn-table tfoot td { font-weight:700; background:#f1f5f9; }
+    .ntn-table input { width:100%; box-sizing:border-box; border:1px solid var(--c-border); border-radius:4px; padding:4px 6px; font-size:13px; text-align:right; font-family:inherit; }
+    .ntn-table input:focus { outline:none; border-color:var(--c-primary); background:#fff; }
+    .ntn-table .ntn-ton { font-weight:600; }
+    .ntn-table .ntn-ton.neg { color:#dc2626; }
+    .ntn-side .box { border:1px solid var(--c-border); border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:12px; background:#fff; }
+    .ntn-side .box h4 { margin:0 0 8px; font-size:13px; font-weight:700; color:#1e293b; }
+    .ntn-side .box .row { display:flex; flex-wrap:nowrap; justify-content:space-between; align-items:center; gap:10px; padding:4px 0; font-size:13px; }
+    .ntn-side .box .row span { color:#475569; min-width:0; }
+    .ntn-side .box .row strong { font-variant-numeric:tabular-nums; white-space:nowrap; flex:0 0 auto; text-align:right; }
+    .ntn-side .box .row.tot { border-top:1px dashed var(--c-border); margin-top:6px; padding-top:8px; font-size:14px; }
+    .ntn-side .box .row.tot strong { color:var(--c-primary); }
+    .ntn-side .box .row.neg strong { color:#dc2626; }
+    .ntn-side .box input.dauky { width:120px; text-align:right; border:1px solid var(--c-border); border-radius:4px; padding:3px 6px; font-size:13px; font-family:inherit; }
+  `;
+  document.head.appendChild(s);
+}
+
+// Dòng hiển thị (TC + tươi từ Đi chợ) kèm SL/giá thực nhập — dùng chung render + kết toán + Excel
+function _ntnRows(ngayYmd) {
+  return buildPhieuRows(ngayYmd).map(r => {
+    const mh = r.mh;
+    const item = mh ? getPhieuNhapItem(ngayYmd, mh.id) : null;
+    let sl, gia, ghiChu, tgsx = null;
+    if (r.is_free) {
+      sl = r.sl_dicho; gia = r.gia_dicho; ghiChu = '';
+    } else if (r.is_tc) {
+      sl = item && item.soLuong != null ? +item.soLuong : null;
+      tgsx = item && item.slTgsx != null ? +item.slTgsx : null;
+      gia = item && item.donGia != null ? +item.donGia : (r.gia_dicho || +mh.gia || 0);
+      ghiChu = item ? (item.ghiChu || '') : '';
+    } else {
+      sl = item && item.soLuong != null ? +item.soLuong : r.sl_dicho;
+      tgsx = item && item.slTgsx != null ? +item.slTgsx : null;
+      gia = item && item.donGia != null ? +item.donGia : r.gia_dicho;
+      ghiChu = item ? (item.ghiChu || '') : '';
+    }
+    // Thành tiền = Mua (sl) × đơn giá. TGSX không tính tiền.
+    const tt = (sl != null) ? roundMoney((sl || 0) * (gia || 0)) : 0;
+    return { ...r, sl, tgsx, gia, tt, ghiChu };
+  });
+}
+
+// Kết toán 1 ngày (Phải chi = Tổng thu − tiền TC, như Excel)
+function _ntnKetToan(ngayYmd, rows) {
+  rows = rows || _ntnRows(ngayYmd);
+  const day = (DATA.diCho || {})[ngayYmd];
+  let tongThuBua = 0, tongAnThem = 0, qsS = 0, qsT = 0, qsC = 0;
+  if (day) ['S','T','C'].forEach(bua => {
+    const qs = +day[bua].qs || 0;
+    tongThuBua += qs * dichoTienBuaTC1(bua);
+    tongAnThem += +day[bua].anThem || 0;
+    if (bua === 'S') qsS = qs; else if (bua === 'T') qsT = qs; else qsC = qs;
+  });
+  const tongThu = tongThuBua + tongAnThem;
+  const tienTc = rows.filter(r => r.is_tc).reduce((s, r) => s + (r.tt || 0), 0);
+  const total = rows.reduce((s, r) => s + (r.tt || 0), 0);
+  const daChiTp = total - tienTc;        // tiền đi chợ ngoài tiêu chuẩn
+  const phaiChiTp = tongThu - tienTc;    // Tổng thu − Gạo, ga, GV
+  const canDoiNgay = phaiChiTp - daChiTp;
+  return { tongThu, tienTc, daChiTp, phaiChiTp, canDoiNgay, qsS, qsT, qsC };
+}
+
+// Cân đối luỹ kế qua hết ngày throughDay (đã gồm cân đối đầu kỳ)
+function _ntnCanDoiLuyKe(nam, thang, throughDay) {
+  let acc = getCanDoiDauKy(nam, thang);
+  const start = getNgayBatDau(nam, thang);   // bỏ qua các ngày trước ngày bắt đầu hoạch toán
+  for (let i = start; i <= throughDay; i++) {
+    const ymd = `${nam}-${String(thang).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+    acc += _ntnKetToan(ymd).canDoiNgay;
+  }
+  return acc;
+}
+
 function renderNhapTrongNgay() {
-  setSubtitle('Chỉ nhập SL/giá cho các mặt hàng tiêu chuẩn (gạo, mắm, dầu...). Mặt hàng tươi tự lấy từ Đi chợ.');
+  _ensureNtnCss();
+  setSubtitle('TC (gạo, mắm, dầu…): nhập SL/giá thực mua. Tươi (ngoài TC): tự lấy từ Đi chợ. Sửa ô → auto lưu vào tồn kho.');
   if (!NTN_DATE) {
     const today = new Date();
     const { thang, nam } = DATA.cauHinh.kyHienTai;
@@ -3378,109 +3786,203 @@ function renderNhapTrongNgay() {
       : `${nam}-${String(thang).padStart(2,'0')}-01`;
   }
   const ngayYmd = NTN_DATE;
+  const { y, m, d } = _ymdParse(ngayYmd);
   setActions(`
     <label class="small text-muted" style="margin:0 6px 0 0">Ngày</label>
-    <input type="date" id="ntn-date-pick" value="${ngayYmd}" style="padding:6px 10px;border:1px solid var(--c-border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit">
+    ${dateInputHtml('ntn-date-pick', ngayYmd)}
     <button class="btn-x" onclick="showSection('ton-kho')">📦 Tồn kho</button>
     <button class="btn-x" onclick="showSection('phieu-nhap')">📥 Phiếu nhập</button>
     <button class="btn-x btn-p" onclick="window.exportNtnExcel('${ngayYmd}')">⬇ Xuất Excel</button>
   `);
-  // Lấy 9 TC items theo DICHO_TC_ITEMS order
-  const rows = DICHO_TC_ITEMS.map(ma => {
-    const mh = DATA.matHang.find(m => m.ma === ma);
-    if (!mh) return null;
-    const item = getPhieuNhapItem(ngayYmd, mh.id);
-    return {
-      mh,
-      sl: item && item.soLuong != null ? +item.soLuong : null,
-      gia: item && item.donGia != null ? +item.donGia : +mh.gia || 0,
-      ghiChu: item ? item.ghiChu : '',
-      dvtDisp: mh.dvt === '%' ? 'Kg' : mh.dvt,
-      dec: mh.decimal ?? 1,
-    };
-  }).filter(Boolean);
 
-  const rowsHtml = rows.map((r, i) => `<tr data-mh-id="${r.mh.id}">
-    <td class="num">${i+1}</td>
-    <td><strong>${r.mh.ten}</strong>${r.mh.dvt === '%' ? ' <span class="pill pill-m" style="font-size:9.5px;padding:0 5px">%</span>':''}</td>
-    <td>${r.dvtDisp}</td>
-    <td class="num"><input type="number" step=".001" class="ntn-sl" value="${r.sl == null ? '' : r.sl}" placeholder="—" style="width:100px;text-align:right;padding:5px 8px;border:1px solid var(--c-border);border-radius:4px;font-size:13px"></td>
-    <td class="num"><input type="number" step="100" class="ntn-gia" value="${Math.round(r.gia)}" style="width:110px;text-align:right;padding:5px 8px;border:1px solid var(--c-border);border-radius:4px;font-size:13px"></td>
-    <td class="num"><strong class="ntn-tt">—</strong></td>
-    <td><input type="text" class="ntn-gc" value="${(r.ghiChu||'').replace(/"/g,'&quot;')}" placeholder="Ghi chú" style="width:100%;padding:5px 8px;border:1px solid var(--c-border);border-radius:4px;font-size:13px;font-family:inherit"></td>
-  </tr>`).join('');
+  // Dòng hiển thị + thông tin tồn kho cho TC kg/L
+  const rows = _ntnRows(ngayYmd);
+  const tonKho = buildTonKhoGrid(y, m);
+  const tonDau = {}, xuatDay = {};
+  if (d >= 1 && d <= tonKho.grid.length) {
+    const gr = tonKho.grid[d - 1];
+    tonKho.items.forEach((mh, i) => { tonDau[mh.id] = gr.cells[i].ton_dau; xuatDay[mh.id] = gr.cells[i].xuat; });
+  }
+  const tonIds = new Set(tonKho.items.map(x => x.id));
+
+  const kt = _ntnKetToan(ngayYmd, rows);
+  const canDoiHomTruoc = _ntnCanDoiLuyKe(y, m, d - 1);
+
+  const rowsHtml = rows.map((r, i) => {
+    const hasTon = r.mh && tonIds.has(r.mh.id);
+    const dec = r.decimal ?? 1;
+
+    if (r.is_tc) {
+      // Mua & TGSX đều để trống, nhập tay. Tồn = tồn đầu + (Mua + TGSX) − xuất. Thành tiền = Mua × đơn giá.
+      const slVal = r.sl == null ? '' : r.sl;
+      const tgsxVal = r.tgsx == null ? '' : r.tgsx;
+      const tonCuoi = hasTon ? ((tonDau[r.mh.id] || 0) + (r.sl || 0) + (r.tgsx || 0) - (xuatDay[r.mh.id] || 0)) : null;
+      return `<tr class="tc-row" data-mh-id="${r.mh.id}" data-is-tc="1"
+          data-has-ton="${hasTon ? 1 : 0}" data-ton-dau="${hasTon ? (tonDau[r.mh.id] || 0) : 0}"
+          data-xuat="${hasTon ? (xuatDay[r.mh.id] || 0) : 0}" data-dec="${dec}">
+        <td class="center">${i+1}</td>
+        <td><strong>${r.ten}</strong></td>
+        <td class="center">${r.dvt_disp}</td>
+        <td class="num"><input type="number" step=".001" class="ntn-sl" value="${slVal}" placeholder="—"></td>
+        <td class="num"><input type="number" step=".001" class="ntn-tgsx" value="${tgsxVal}" placeholder="—"></td>
+        <td class="num"><input type="number" step="100" class="ntn-gia" value="${Math.round(r.gia || 0)}"></td>
+        <td class="num"><strong class="ntn-tt">${r.sl != null && r.tt ? fmt(r.tt) : '—'}</strong></td>
+        <td class="num"><span class="ntn-ton${tonCuoi != null && tonCuoi < 0 ? ' neg' : ''}">${tonCuoi != null ? fmtN(tonCuoi, dec) : '—'}</span></td>
+      </tr>`;
+    }
+    // Dòng tươi (ngoài TC) — chỉ đọc, lấy từ Đi chợ. Mua = SL Đi chợ, không có TGSX.
+    return `<tr class="free-row" data-is-tc="0" data-fixed-tt="${r.tt || 0}">
+      <td class="center">${i+1}</td>
+      <td>${r.ten}</td>
+      <td class="center">${r.dvt_disp || ''}</td>
+      <td class="num">${r.sl != null ? fmtN(r.sl, dec) : '—'}</td>
+      <td class="num">—</td>
+      <td class="num">${fmt(Math.round(r.gia || 0))}</td>
+      <td class="num">${r.tt ? fmt(r.tt) : '—'}</td>
+      <td class="num">—</td>
+    </tr>`;
+  }).join('');
 
   document.getElementById('page-body').innerHTML = `
     <div class="banner banner-i">
       <span class="b-ico">⚡</span>
-      <div><strong>1 lần nhập có thể dùng nhiều ngày</strong> (VD: 1 bao gạo dùng cả tuần). Nhập SL = 0 hoặc để trống cho mặt hàng ngày đó không mua. Sửa ô → auto lưu.</div>
+      <div><strong>Bảng nhập trong ngày — ${ymdToDmy(ngayYmd)}.</strong> Ô <em>Mua</em>, <em>TGSX</em> &amp; <em>Đơn giá</em> của mặt hàng tiêu chuẩn sửa được; tồn kho cộng cả Mua + TGSX, thành tiền chỉ tính Mua × đơn giá. Mặt hàng tươi tự lấy từ Đi chợ. Tồn kho cộng dồn lâu dài.</div>
     </div>
-    <div class="card-x">
-      <div class="card-x-head"><h3>Mặt hàng tiêu chuẩn — ${ymdToDmy(ngayYmd)}</h3>
-        <span class="pill pill-i">${rows.length} mặt hàng TC</span>
+    <div class="ntn-layout">
+      <div class="card-x">
+        <div class="card-x-head"><h3>Nhập trong ngày — ${ymdToDmy(ngayYmd)}</h3>
+          <span class="pill pill-i">${rows.length} mặt hàng</span>
+        </div>
+        <div class="card-x-body p-0">
+          <table class="ntn-table">
+            <thead>
+              <tr>
+                <th rowspan="2" class="num" style="width:34px">STT</th>
+                <th rowspan="2">Mặt hàng</th>
+                <th rowspan="2" style="width:46px">ĐVT</th>
+                <th colspan="2">Số lượng</th>
+                <th rowspan="2" class="num" style="width:96px">Đơn giá</th>
+                <th rowspan="2" class="num" style="width:104px">Thành tiền</th>
+                <th rowspan="2" class="num" style="width:88px">Tồn kho</th>
+              </tr>
+              <tr><th class="num" style="width:80px">Mua</th><th class="num" style="width:96px">TGSX</th></tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+            <tfoot><tr>
+              <td colspan="6" class="center">Cộng tiền nhập / đi chợ</td>
+              <td class="num"><strong id="ntn-total">—</strong></td>
+              <td></td>
+            </tr></tfoot>
+          </table>
+        </div>
       </div>
-      <div class="card-x-body p-0">
-        <table class="t t-compact">
-          <thead><tr>
-            <th class="num">STT</th>
-            <th>Mặt hàng</th>
-            <th>ĐVT</th>
-            <th class="num">SL nhập</th>
-            <th class="num">Đơn giá (đ)</th>
-            <th class="num">Thành tiền (đ)</th>
-            <th>Ghi chú</th>
-          </tr></thead>
-          <tbody>${rowsHtml}</tbody>
-          <tfoot><tr><td colspan="5"><strong>Tổng nhập</strong></td><td class="num"><strong id="ntn-total">—</strong></td><td></td></tr></tfoot>
-        </table>
+      <div class="ntn-side">
+        <div class="box">
+          <h4>Kết toán ngày</h4>
+          <div class="row"><span>Tổng thu</span><strong id="kt-tongthu">${fmt(Math.round(kt.tongThu))}</strong></div>
+          <div class="row"><span>Gạo, ga, GV (TC)</span><strong id="kt-tientc">${fmt(Math.round(kt.tienTc))}</strong></div>
+          <div class="row"><span>Phải chi TP</span><strong id="kt-phaichi">${fmt(Math.round(kt.phaiChiTp))}</strong></div>
+          <div class="row"><span>Đã chi TP</span><strong id="kt-dachi">${fmt(Math.round(kt.daChiTp))}</strong></div>
+          <div class="row"><span>Cân đối hôm trước</span><strong>${fmt(Math.round(canDoiHomTruoc))}</strong></div>
+          <div class="row tot${(canDoiHomTruoc + kt.canDoiNgay) < 0 ? ' neg' : ''}" id="kt-candoi-row"><span>Cân đối</span><strong id="kt-candoi">${fmt(Math.round(canDoiHomTruoc + kt.canDoiNgay))}</strong></div>
+        </div>
+        <div class="box">
+          <h4>Quân số (xuất ăn)</h4>
+          <div class="row"><span>Sáng</span><strong>${kt.qsS}</strong></div>
+          <div class="row"><span>Trưa</span><strong>${kt.qsT}</strong></div>
+          <div class="row"><span>Chiều</span><strong>${kt.qsC}</strong></div>
+        </div>
+        <div class="box">
+          <h4>Cân đối đầu kỳ</h4>
+          <div class="row"><span>Chuyển sang ${m}/${y}</span>
+            <input type="number" step="1000" class="dauky" id="ntn-dauky" value="${getCanDoiDauKy(y, m) || ''}" placeholder="0"></div>
+          <div class="small text-muted" style="margin-top:4px">Cân đối còn lại của tháng trước, cộng vào ngày 1.</div>
+        </div>
       </div>
     </div>
     <details class="fold">
-      <summary>Vì sao TC items nhập riêng?</summary>
-      <div class="formula"><span class="cmt"># Lý do tách Nhập trong ngày khỏi Đi chợ:</span>
-- TC items như gạo, gas thường mua theo bao/bình, dùng cả tuần
-- Đi chợ chỉ ghi nhận tươi (thịt/cá/rau) mua hàng ngày
-- Nhập trong ngày → lưu SL thực tế mua → vào bảng Tồn kho cộng dồn
-- Tồn kho ngày X = Tồn ngày X-1 + Nhập(X) - Xuất(X)</div>
+      <summary>Công thức kết toán &amp; tồn kho</summary>
+      <div class="formula"><span class="cmt"># Kết toán ngày:</span>
+- Tổng thu        = Σ (QS bữa × tiền ăn TC1 bữa) + ăn thêm
+- Gạo, ga, GV     = Σ thành tiền mặt hàng tiêu chuẩn (Mua × đơn giá; TGSX không tính tiền)
+- Phải chi TP     = Tổng thu − Gạo, ga, GV
+- Đã chi TP       = Σ tiền đi chợ ngoài tiêu chuẩn (tươi)
+- Cân đối         = Phải chi TP − Đã chi TP + Cân đối hôm trước
+
+<span class="cmt"># Tồn kho (mặt hàng tiêu chuẩn):</span>
+- Tồn cuối ngày X = Tồn cuối X-1 + (Mua + TGSX)(X) − Xuất(X)
+- Xuất(X)         = Σ (định lượng TC1 bữa × QS Đi chợ bữa)</div>
     </details>
   `;
 
   document.getElementById('ntn-date-pick').onchange = e => { NTN_DATE = e.target.value; renderNhapTrongNgay(); };
+  document.getElementById('ntn-dauky').onchange = e => {
+    setCanDoiDauKy(y, m, +e.target.value || 0);
+    renderNhapTrongNgay();
+  };
 
   function recompute() {
-    let total = 0;
-    document.querySelectorAll('#page-body tr[data-mh-id]').forEach(tr => {
-      const sl = +tr.querySelector('.ntn-sl').value || 0;
-      const gia = +tr.querySelector('.ntn-gia').value || 0;
-      const tt = sl * gia;
-      tr.querySelector('.ntn-tt').textContent = sl > 0 ? fmt(Math.round(tt)) : '—';
+    let total = 0, tienTc = 0;
+    document.querySelectorAll('#page-body .ntn-table tbody tr').forEach(tr => {
+      const slInp = tr.querySelector('.ntn-sl');
+      let tt;
+      if (slInp) {
+        const sl = +slInp.value || 0;
+        const tgsxInp = tr.querySelector('.ntn-tgsx');
+        const tgsx = tgsxInp ? (+tgsxInp.value || 0) : 0;
+        const giaInp = tr.querySelector('.ntn-gia');
+        const gia = giaInp ? (+giaInp.value || 0) : 0;
+        tt = roundMoney(sl * gia);
+        const ttEl = tr.querySelector('.ntn-tt');
+        if (ttEl) ttEl.textContent = sl > 0 ? fmt(tt) : '—';
+        if (tr.dataset.hasTon === '1') {
+          const tonCuoi = (+tr.dataset.tonDau || 0) + sl + tgsx - (+tr.dataset.xuat || 0);
+          const span = tr.querySelector('.ntn-ton');
+          if (span) {
+            span.textContent = fmtN(tonCuoi, +tr.dataset.dec || 1);
+            span.classList.toggle('neg', tonCuoi < 0);
+          }
+        }
+      } else {
+        tt = +tr.dataset.fixedTt || 0;
+      }
       total += tt;
+      if (tr.dataset.isTc === '1') tienTc += tt;
     });
+    const daChi = total - tienTc;
+    const phaiChi = kt.tongThu - tienTc;
+    const canDoi = canDoiHomTruoc + (phaiChi - daChi);
     document.getElementById('ntn-total').textContent = total > 0 ? fmt(Math.round(total)) : '—';
+    document.getElementById('kt-tientc').textContent = fmt(Math.round(tienTc));
+    document.getElementById('kt-phaichi').textContent = fmt(Math.round(phaiChi));
+    document.getElementById('kt-dachi').textContent = fmt(Math.round(daChi));
+    document.getElementById('kt-candoi').textContent = fmt(Math.round(canDoi));
+    document.getElementById('kt-candoi-row').classList.toggle('neg', canDoi < 0);
   }
-  function flashOk(el) { el.style.background = '#ecfdf5'; el.style.borderColor = '#10b981'; setTimeout(() => { el.style.background = ''; el.style.borderColor = ''; }, 600); }
+  function flashOk(el) { el.style.borderColor = '#10b981'; el.style.background = '#ecfdf5'; setTimeout(() => { el.style.borderColor = ''; el.style.background = ''; }, 600); }
   function bind(cls, field) {
     document.querySelectorAll('.' + cls).forEach(inp => {
       inp.oninput = () => recompute();
       inp.onchange = e => {
         const tr = e.target.closest('tr');
         const mhId = +tr.dataset.mhId;
-        const val = (cls === 'ntn-gc') ? e.target.value : e.target.value;
-        savePhieuNhapItem(ngayYmd, mhId, { [field]: val });
+        if (!mhId) return;
+        savePhieuNhapItem(ngayYmd, mhId, { [field]: e.target.value });
         flashOk(e.target);
       };
     });
   }
   bind('ntn-sl', 'sl');
+  bind('ntn-tgsx', 'tgsx');
   bind('ntn-gia', 'gia');
-  bind('ntn-gc', 'ghiChu');
   recompute();
 }
 
-// Excel Nhập trong ngày — bảng đơn giản 7 cột giống tab
+// Excel Nhập trong ngày — bảng đầy đủ (TC + tươi) + Kết toán + Tồn kho, giống tab
 window.exportNtnExcel = async function(ngayYmd) {
   try {
     await _ensureExcelJS();
+    const { y, m, d } = _ymdParse(ngayYmd);
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Nhap trong ngay');
     const bold = { name: 'Times New Roman', size: 11, bold: true };
@@ -3488,55 +3990,104 @@ window.exportNtnExcel = async function(ngayYmd) {
     const center = { horizontal:'center', vertical:'middle', wrapText:true };
     const right = { horizontal:'right', vertical:'middle' };
     const left = { horizontal:'left', vertical:'middle' };
-    [5, 24, 9, 12, 14, 16, 22].forEach((w, i) => ws.getColumn(i+1).width = w);
+    [5, 24, 7, 11, 11, 12, 14, 11, 3, 18, 14].forEach((w, i) => ws.getColumn(i+1).width = w);
+
+    // Model dùng chung với render
+    const rows = _ntnRows(ngayYmd);
+    const tonKho = buildTonKhoGrid(y, m);
+    const tonDau = {}, xuatDay = {};
+    if (d >= 1 && d <= tonKho.grid.length) {
+      const gr = tonKho.grid[d - 1];
+      tonKho.items.forEach((mh, i) => { tonDau[mh.id] = gr.cells[i].ton_dau; xuatDay[mh.id] = gr.cells[i].xuat; });
+    }
+    const tonIds = new Set(tonKho.items.map(x => x.id));
+    const kt = _ntnKetToan(ngayYmd, rows);
+    const canDoiHomTruoc = _ntnCanDoiLuyKe(y, m, d - 1);
+    const canDoi = canDoiHomTruoc + kt.canDoiNgay;
 
     let r = 1;
-    ws.mergeCells(r, 1, r, 7);
-    ws.getCell(r, 1).value = `NHẬP TRONG NGÀY — ${ymdToDmy(ngayYmd)}`;
+    ws.mergeCells(r, 1, r, 8);
+    ws.getCell(r, 1).value = `BẢNG NHẬP TRONG NGÀY — ${ymdToDmy(ngayYmd)}`;
     ws.getCell(r, 1).font = { ...bold, size: 14 };
     ws.getCell(r, 1).alignment = center;
     r += 2;
-    const headers = ['STT','Mặt hàng','ĐVT','SL nhập','Đơn giá','Thành tiền','Ghi chú'];
-    headers.forEach((h, i) => {
-      const c = ws.getCell(r, i+1);
-      c.value = h; c.font = bold; c.alignment = center; c.border = _XL_BORDER_ALL;
+
+    const headRow = r;
+    const headersTop = ['STT','Mặt hàng','ĐVT','Số lượng', null,'Đơn giá','Thành tiền','Tồn kho'];
+    headersTop.forEach((v, i) => {
+      if (v == null) return;
+      const c = ws.getCell(headRow, i+1);
+      c.value = v; c.font = bold; c.alignment = center; c.border = _XL_BORDER_ALL;
     });
+    ws.mergeCells(headRow, 4, headRow, 5);
+    [1,2,3,6,7,8].forEach(col => ws.mergeCells(headRow, col, headRow + 1, col));
     r++;
-    let total = 0;
-    DICHO_TC_ITEMS.forEach((ma, idx) => {
-      const mh = DATA.matHang.find(m => m.ma === ma);
-      if (!mh) return;
-      const item = getPhieuNhapItem(ngayYmd, mh.id);
-      const sl = item && item.soLuong != null ? +item.soLuong : null;
-      const gia = item && item.donGia != null ? +item.donGia : +mh.gia || 0;
-      const tt = sl ? sl * gia : 0;
+    ws.getCell(r, 4).value = 'Mua'; ws.getCell(r, 5).value = 'TGSX';
+    [4,5].forEach(c => { ws.getCell(r, c).font = bold; ws.getCell(r, c).alignment = center; ws.getCell(r, c).border = _XL_BORDER_ALL; });
+    r++;
+
+    let total = 0, tienTc = 0;
+    rows.forEach((row, idx) => {
+      const hasTon = row.mh && tonIds.has(row.mh.id);
+      const dec = row.decimal ?? 1;
+      const slFmt = dec > 0 ? `#,##0.${'0'.repeat(dec)}` : '#,##0';
+      const tt = row.tt || 0;
       total += tt;
-      const dec = mh.decimal ?? 1;
-      const dvt = mh.dvt === '%' ? 'Kg' : mh.dvt;
+      if (row.is_tc) tienTc += tt;
+
       ws.getCell(r, 1).value = idx + 1;
-      ws.getCell(r, 2).value = mh.ten + (mh.dvt === '%' ? ' (%)' : '');
-      ws.getCell(r, 3).value = dvt;
-      if (sl != null) ws.getCell(r, 4).value = sl;
-      ws.getCell(r, 5).value = Math.round(gia);
-      if (sl != null) ws.getCell(r, 6).value = Math.round(tt);
-      ws.getCell(r, 7).value = item ? item.ghiChu : '';
-      for (let c = 1; c <= 7; c++) {
+      ws.getCell(r, 2).value = row.ten;
+      ws.getCell(r, 3).value = row.dvt_disp || '';
+      if (row.sl != null) ws.getCell(r, 4).value = row.sl;          // Mua
+      if (row.tgsx != null) ws.getCell(r, 5).value = row.tgsx;      // TGSX
+      ws.getCell(r, 6).value = Math.round(row.gia || 0);
+      if (row.sl != null && tt) ws.getCell(r, 7).value = Math.round(tt);
+      if (hasTon) ws.getCell(r, 8).value = (tonDau[row.mh.id] || 0) + (row.sl || 0) + (row.tgsx || 0) - (xuatDay[row.mh.id] || 0);
+      for (let c = 1; c <= 8; c++) {
         const cell = ws.getCell(r, c);
         cell.font = normal; cell.border = _XL_BORDER_ALL;
-        cell.alignment = (c === 1 || c === 3) ? center : (c === 2 || c === 7 ? left : right);
+        cell.alignment = (c === 1 || c === 3) ? center : (c === 2 ? left : right);
       }
-      ws.getCell(r, 4).numFmt = dec > 0 ? `#,##0.${'0'.repeat(dec)}` : '#,##0';
-      ws.getCell(r, 5).numFmt = '#,##0';
+      ws.getCell(r, 4).numFmt = slFmt;
+      ws.getCell(r, 5).numFmt = slFmt;
       ws.getCell(r, 6).numFmt = '#,##0';
+      ws.getCell(r, 7).numFmt = '#,##0';
+      ws.getCell(r, 8).numFmt = slFmt;
       r++;
     });
-    ws.mergeCells(r, 1, r, 5);
-    ws.getCell(r, 1).value = 'Tổng nhập';
+    // Cộng
+    ws.mergeCells(r, 1, r, 6);
+    ws.getCell(r, 1).value = 'Cộng tiền nhập / đi chợ';
     ws.getCell(r, 1).font = bold; ws.getCell(r, 1).alignment = center;
-    ws.getCell(r, 6).value = Math.round(total);
-    ws.getCell(r, 6).font = bold; ws.getCell(r, 6).numFmt = '#,##0';
-    ws.getCell(r, 6).alignment = right;
-    for (let c = 1; c <= 7; c++) ws.getCell(r, c).border = _XL_BORDER_ALL;
+    ws.getCell(r, 7).value = Math.round(total);
+    ws.getCell(r, 7).font = bold; ws.getCell(r, 7).numFmt = '#,##0'; ws.getCell(r, 7).alignment = right;
+    for (let c = 1; c <= 8; c++) ws.getCell(r, c).border = _XL_BORDER_ALL;
+
+    // Khối Kết toán + Quân số (cột 10-11), bắt đầu cạnh bảng
+    let kr = headRow;
+    const kBox = (label, val, isMoney) => {
+      ws.getCell(kr, 10).value = label; ws.getCell(kr, 10).font = bold; ws.getCell(kr, 10).alignment = left;
+      ws.getCell(kr, 11).value = isMoney ? Math.round(val) : val;
+      ws.getCell(kr, 11).font = normal; ws.getCell(kr, 11).alignment = right;
+      if (isMoney) ws.getCell(kr, 11).numFmt = '#,##0';
+      ws.getCell(kr, 10).border = _XL_BORDER_ALL; ws.getCell(kr, 11).border = _XL_BORDER_ALL;
+      kr++;
+    };
+    ws.getCell(kr, 10).value = 'KẾT TOÁN NGÀY'; ws.getCell(kr, 10).font = bold; ws.getCell(kr, 10).alignment = center;
+    ws.mergeCells(kr, 10, kr, 11); ws.getCell(kr, 10).border = _XL_BORDER_ALL; ws.getCell(kr, 11).border = _XL_BORDER_ALL; kr++;
+    kBox('Tổng thu', kt.tongThu, true);
+    kBox('Gạo, ga, GV (TC)', tienTc, true);
+    kBox('Phải chi TP', kt.phaiChiTp, true);
+    kBox('Đã chi TP', kt.daChiTp, true);
+    kBox('Cân đối hôm trước', canDoiHomTruoc, true);
+    kBox('Cân đối', canDoi, true);
+    kr++;
+    ws.getCell(kr, 10).value = 'QUÂN SỐ (XUẤT ĂN)'; ws.getCell(kr, 10).font = bold; ws.getCell(kr, 10).alignment = center;
+    ws.mergeCells(kr, 10, kr, 11); ws.getCell(kr, 10).border = _XL_BORDER_ALL; ws.getCell(kr, 11).border = _XL_BORDER_ALL; kr++;
+    kBox('Sáng', kt.qsS, false);
+    kBox('Trưa', kt.qsT, false);
+    kBox('Chiều', kt.qsC, false);
+
     await _xlsxDownload(wb, `NhapTrongNgay_${ngayYmd}.xlsx`);
   } catch (e) {
     alert('Lỗi xuất Excel: ' + (e.message || e));
@@ -3630,7 +4181,7 @@ function renderPhieuNhap() {
   const { y, m, d } = _ymdParse(ngayYmd);
   setActions(`
     <label class="small text-muted" style="margin:0 6px 0 0">Ngày</label>
-    <input type="date" id="pn-date" value="${ngayYmd}" style="padding:6px 10px;border:1px solid var(--c-border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit">
+    ${dateInputHtml('pn-date', ngayYmd)}
     <button class="btn-x" onclick="showSection('di-cho')">← Đi chợ</button>
     <button class="btn-x" onclick="showSection('phieu-xuat')">📄 Phiếu xuất</button>
     <button class="btn-x btn-p" onclick="window.exportPhieuNhapExcel('${ngayYmd}')">⬇ Xuất Excel</button>
@@ -3646,7 +4197,7 @@ function renderPhieuNhap() {
       sl = r.sl_dicho; gia = r.gia_dicho; ghiChu = '';
     } else if (r.is_tc) {
       sl = item && item.soLuong != null ? +item.soLuong : null;
-      gia = item && item.donGia != null ? +item.donGia : (+mh.gia || 0);
+      gia = item && item.donGia != null ? +item.donGia : (r.gia_dicho || +mh.gia || 0);
       ghiChu = item ? (item.ghiChu || '') : '';
     } else {
       sl = item && item.soLuong != null ? +item.soLuong : r.sl_dicho;
@@ -3789,7 +4340,7 @@ window.exportPhieuNhapExcel = async function(ngayYmd) {
       if (r.is_free) { sl = r.sl_dicho; gia = r.gia_dicho; ghiChu = ''; }
       else if (r.is_tc) {
         sl = item && item.soLuong != null ? +item.soLuong : null;
-        gia = item && item.donGia != null ? +item.donGia : (+mh.gia || 0);
+        gia = item && item.donGia != null ? +item.donGia : (r.gia_dicho || +mh.gia || 0);
         ghiChu = item ? (item.ghiChu || '') : '';
       } else {
         sl = item && item.soLuong != null ? +item.soLuong : r.sl_dicho;
@@ -4001,7 +4552,7 @@ function renderPhieuXuat() {
   const { y, m, d } = _ymdParse(ngayYmd);
   setActions(`
     <label class="small text-muted" style="margin:0 6px 0 0">Ngày</label>
-    <input type="date" id="px-date" value="${ngayYmd}" style="padding:6px 10px;border:1px solid var(--c-border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit">
+    ${dateInputHtml('px-date', ngayYmd)}
     <button class="btn-x" onclick="showSection('di-cho')">← Đi chợ</button>
     <button class="btn-x btn-p" onclick="window.exportPhieuXuatExcel('${ngayYmd}')">⬇ Xuất Excel</button>
   `);
@@ -4583,7 +5134,7 @@ function renderSoNX() {
 
   setActions(`
     <label class="small text-muted" style="margin:0 6px 0 0">Ngày</label>
-    <input type="date" id="sonx-date" value="${SONX_DATE}" style="padding:6px 10px;border:1px solid var(--c-border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit">
+    ${dateInputHtml('sonx-date', SONX_DATE)}
     <button class="btn-x btn-p" onclick="window.exportSoNxExcel('${SONX_DATE}')">⬇ Xuất Excel</button>
   `);
 
@@ -5234,6 +5785,7 @@ document.getElementById('btn-clear').onclick = () => {
 };
 
 // Initial render
+_initDateVn();
 showSection('dashboard');
 </script>
 </body>
