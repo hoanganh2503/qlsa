@@ -3557,12 +3557,17 @@ function buildPhieuRows(ngayYmd) {
   });
 
   const rows = list.map(x => {
-    if (x.is_free) return {
-      mh:null, ten:x.ten, dvt:'', dvt_disp:'',
-      is_tc:false, is_pct:false, is_free:true,
-      sl_dicho: x.sl, gia_dicho: x.sl > 0 ? x.tt / x.sl : 0, tt_dicho: x.tt,
-      decimal: 1,
-    };
+    if (x.is_free) {
+      // Món tươi/free là text (không có ĐVT) — dò theo tên trong danh mục mặt hàng, mặc định 'Kg'
+      const mhByName = DATA.matHang.find(m => (m.ten || '').trim().toLowerCase() === (x.ten || '').trim().toLowerCase());
+      const fdvt = (mhByName && mhByName.dvt && mhByName.dvt !== '%') ? mhByName.dvt : 'Kg';
+      return {
+        mh:null, ten:x.ten, dvt:fdvt, dvt_disp:fdvt,
+        is_tc:false, is_pct:false, is_free:true,
+        sl_dicho: x.sl, gia_dicho: x.sl > 0 ? x.tt / x.sl : 0, tt_dicho: x.tt,
+        decimal: 1,
+      };
+    }
     const mh = x.mh;
     const dvt = mh.dvt;
     const dvt_disp = dvt === '%' ? 'Kg' : dvt;
@@ -3709,7 +3714,9 @@ function _ensureNtnCss() {
     .ntn-side .box { border:1px solid var(--c-border); border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:12px; background:#fff; }
     .ntn-side .box h4 { margin:0 0 8px; font-size:13px; font-weight:700; color:#1e293b; }
     .ntn-side .box .row { display:flex; flex-wrap:nowrap; justify-content:space-between; align-items:center; gap:10px; padding:4px 0; font-size:13px; }
-    .ntn-side .box .row span { color:#475569; min-width:0; }
+    /* Khử xung đột với .row của Bootstrap (Bootstrap đặt .row>* { width:100% } khiến giá trị bị đẩy xuống/ẩn) */
+    .ntn-side .box .row > * { width:auto; max-width:none; padding-left:0; padding-right:0; margin-top:0; }
+    .ntn-side .box .row span { color:#475569; min-width:0; flex:1 1 auto; }
     .ntn-side .box .row strong { font-variant-numeric:tabular-nums; white-space:nowrap; flex:0 0 auto; text-align:right; }
     .ntn-side .box .row.tot { border-top:1px dashed var(--c-border); margin-top:6px; padding-top:8px; font-size:14px; }
     .ntn-side .box .row.tot strong { color:var(--c-primary); }
@@ -3756,9 +3763,11 @@ function _ntnKetToan(ngayYmd, rows) {
     if (bua === 'S') qsS = qs; else if (bua === 'T') qsT = qs; else qsC = qs;
   });
   const tongThu = tongThuBua + tongAnThem;
-  const tienTc = rows.filter(r => r.is_tc).reduce((s, r) => s + (r.tt || 0), 0);
-  const total = rows.reduce((s, r) => s + (r.tt || 0), 0);
-  const daChiTp = total - tienTc;        // tiền đi chợ ngoài tiêu chuẩn
+  // Gạo, ga, GV = TIÊU CHUẨN TC trong Đi chợ (tt_dicho), KHÔNG tính số Mua/TGSX nhập tay.
+  // Số nhập tay chỉ ảnh hưởng Tồn kho / Phiếu xuất / Sổ Nhập-Xuất.
+  const tienTc = rows.filter(r => r.is_tc).reduce((s, r) => s + (r.tt_dicho || 0), 0);
+  // Đã chi TP = tiền đi chợ ngoài tiêu chuẩn (tươi) — cũng theo Đi chợ.
+  const daChiTp = rows.filter(r => !r.is_tc).reduce((s, r) => s + (r.tt_dicho || 0), 0);
   const phaiChiTp = tongThu - tienTc;    // Tổng thu − Gạo, ga, GV
   const canDoiNgay = phaiChiTp - daChiTp;
   return { tongThu, tienTc, daChiTp, phaiChiTp, canDoiNgay, qsS, qsT, qsC };
@@ -3904,10 +3913,11 @@ function renderNhapTrongNgay() {
       <summary>Công thức kết toán &amp; tồn kho</summary>
       <div class="formula"><span class="cmt"># Kết toán ngày:</span>
 - Tổng thu        = Σ (QS bữa × tiền ăn TC1 bữa) + ăn thêm
-- Gạo, ga, GV     = Σ thành tiền mặt hàng tiêu chuẩn (Mua × đơn giá; TGSX không tính tiền)
+- Gạo, ga, GV     = Σ tiêu chuẩn TC trong Đi chợ (KHÔNG tính số Mua/TGSX nhập tay)
 - Phải chi TP     = Tổng thu − Gạo, ga, GV
 - Đã chi TP       = Σ tiền đi chợ ngoài tiêu chuẩn (tươi)
 - Cân đối         = Phải chi TP − Đã chi TP + Cân đối hôm trước
+  → Số Mua/TGSX nhập tay CHỈ vào Tồn kho / Phiếu xuất / Sổ Nhập-Xuất, không vào kết toán.
 
 <span class="cmt"># Tồn kho (mặt hàng tiêu chuẩn):</span>
 - Tồn cuối ngày X = Tồn cuối X-1 + (Mua + TGSX)(X) − Xuất(X)
@@ -3922,7 +3932,9 @@ function renderNhapTrongNgay() {
   };
 
   function recompute() {
-    let total = 0, tienTc = 0;
+    // Chỉ cập nhật cột Thành tiền + Tồn kho của bảng và dòng "Cộng" (theo số Mua nhập tay).
+    // KẾT TOÁN NGÀY (Gạo ga GV / Phải chi / Đã chi / Cân đối) = tiêu chuẩn Đi chợ, cố định, KHÔNG đổi theo số nhập.
+    let total = 0;
     document.querySelectorAll('#page-body .ntn-table tbody tr').forEach(tr => {
       const slInp = tr.querySelector('.ntn-sl');
       let tt;
@@ -3947,17 +3959,9 @@ function renderNhapTrongNgay() {
         tt = +tr.dataset.fixedTt || 0;
       }
       total += tt;
-      if (tr.dataset.isTc === '1') tienTc += tt;
     });
-    const daChi = total - tienTc;
-    const phaiChi = kt.tongThu - tienTc;
-    const canDoi = canDoiHomTruoc + (phaiChi - daChi);
-    document.getElementById('ntn-total').textContent = total > 0 ? fmt(Math.round(total)) : '—';
-    document.getElementById('kt-tientc').textContent = fmt(Math.round(tienTc));
-    document.getElementById('kt-phaichi').textContent = fmt(Math.round(phaiChi));
-    document.getElementById('kt-dachi').textContent = fmt(Math.round(daChi));
-    document.getElementById('kt-candoi').textContent = fmt(Math.round(canDoi));
-    document.getElementById('kt-candoi-row').classList.toggle('neg', canDoi < 0);
+    const totalEl = document.getElementById('ntn-total');
+    if (totalEl) totalEl.textContent = total > 0 ? fmt(Math.round(total)) : '—';
   }
   function flashOk(el) { el.style.borderColor = '#10b981'; el.style.background = '#ecfdf5'; setTimeout(() => { el.style.borderColor = ''; el.style.background = ''; }, 600); }
   function bind(cls, field) {
@@ -4026,14 +4030,13 @@ window.exportNtnExcel = async function(ngayYmd) {
     [4,5].forEach(c => { ws.getCell(r, c).font = bold; ws.getCell(r, c).alignment = center; ws.getCell(r, c).border = _XL_BORDER_ALL; });
     r++;
 
-    let total = 0, tienTc = 0;
+    let total = 0;
     rows.forEach((row, idx) => {
       const hasTon = row.mh && tonIds.has(row.mh.id);
       const dec = row.decimal ?? 1;
       const slFmt = dec > 0 ? `#,##0.${'0'.repeat(dec)}` : '#,##0';
       const tt = row.tt || 0;
       total += tt;
-      if (row.is_tc) tienTc += tt;
 
       ws.getCell(r, 1).value = idx + 1;
       ws.getCell(r, 2).value = row.ten;
@@ -4076,7 +4079,7 @@ window.exportNtnExcel = async function(ngayYmd) {
     ws.getCell(kr, 10).value = 'KẾT TOÁN NGÀY'; ws.getCell(kr, 10).font = bold; ws.getCell(kr, 10).alignment = center;
     ws.mergeCells(kr, 10, kr, 11); ws.getCell(kr, 10).border = _XL_BORDER_ALL; ws.getCell(kr, 11).border = _XL_BORDER_ALL; kr++;
     kBox('Tổng thu', kt.tongThu, true);
-    kBox('Gạo, ga, GV (TC)', tienTc, true);
+    kBox('Gạo, ga, GV (TC)', kt.tienTc, true);
     kBox('Phải chi TP', kt.phaiChiTp, true);
     kBox('Đã chi TP', kt.daChiTp, true);
     kBox('Cân đối hôm trước', canDoiHomTruoc, true);
@@ -4128,7 +4131,11 @@ function _ensurePnPxCss() {
     .pn-table tfoot td, .px-table tfoot td { font-weight:700; background:#f8fafc; }
     .pn-aux { font-size:12px; }
     .pn-aux .box { border:1px solid #000; padding:7px 10px; margin-bottom:8px; }
-    .pn-aux .box .row { display:flex; justify-content:space-between; padding:2px 0; }
+    .pn-aux .box .row { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:2px 0; }
+    /* Khử xung đột với .row của Bootstrap (.row>* { width:100% }) */
+    .pn-aux .box .row > * { width:auto; max-width:none; padding-left:0; padding-right:0; margin-top:0; }
+    .pn-aux .box .row span { flex:1 1 auto; min-width:0; }
+    .pn-aux .box .row strong { flex:0 0 auto; white-space:nowrap; text-align:right; }
     .pn-aux .box .row.tot { border-top:1px dashed #999; margin-top:4px; padding-top:6px; font-weight:700; }
     .pn-aux h4 { font-size:13px; margin:0 0 6px; font-weight:700; }
     .pn-bottom { margin-top:10px; }
@@ -4265,7 +4272,6 @@ function renderPhieuNhap() {
           <tr><td class="label">Nhập vào kho:</td><td class="value">Bếp tiểu đoàn</td></tr>
         </table>
       </div>
-      <div class="pn-layout">
         <div>
           <table class="pn-table">
             <thead>
@@ -4287,24 +4293,6 @@ function renderPhieuNhap() {
             <div><strong>Tổng nhập: ${displayRows.filter(r => (r.sl || 0) > 0).length} mặt hàng.</strong></div>
             <div class="pn-words">Thành tiền: ${vndToVnText(Math.round(total))}</div>
           </div>
-        </div>
-        <div class="pn-aux">
-          <div class="box">
-            <h4>Kết toán ngày</h4>
-            <div class="row"><span>Tổng thu</span><strong>${fmt(Math.round(kt.tongThu))}</strong></div>
-            <div class="row"><span>Gạo, ga, GV (TC)</span><strong>${fmt(Math.round(kt.tienTc))}</strong></div>
-            <div class="row"><span>Phải chi TP</span><strong>${fmt(Math.round(kt.phaiChiTp))}</strong></div>
-            <div class="row"><span>Đã chi TP</span><strong>${fmt(Math.round(kt.daChiTp))}</strong></div>
-            <div class="row tot"><span>Cân đối</span><strong>${fmt(Math.round(kt.canDoi))}</strong></div>
-          </div>
-          <div class="box">
-            <h4>Quân số (xuất ăn)</h4>
-            <div class="row"><span>Sáng</span><strong>${kt.qsS}</strong></div>
-            <div class="row"><span>Trưa</span><strong>${kt.qsT}</strong></div>
-            <div class="row"><span>Chiều</span><strong>${kt.qsC}</strong></div>
-          </div>
-          ${tonConRows ? `<div class="box"><h4>Tồn còn lại (sau ngày)</h4>${tonConRows}</div>` : ''}
-        </div>
       </div>
       <div class="pn-sign">
         <div><div class="role">Người giao hàng</div><div>${donvi.tiepPham || '—'}</div></div>
@@ -4528,6 +4516,8 @@ function aggregatePhieuXuat(ngayYmd) {
       });
     });
   }
+  // Hàng % (gia vị, dầu diezen, rửa bát): Xuất → số lượng để trống, thành tiền giữ theo Đi chợ
+  Object.values(agg).forEach(a => { if (a.is_pct) a.sl = null; });
   const TC_INDEX = {};
   DICHO_TC_ITEMS.forEach((ma, i) => { TC_INDEX[ma] = i; });
   return Object.values(agg).sort((a, b) => {
@@ -4582,9 +4572,9 @@ function renderPhieuXuat() {
     <td class="center">${r.stt}</td>
     <td>${r.ten}</td>
     <td class="center">${r.dvt}</td>
-    <td class="num">${fmtN(r.sl, r.dec)}</td>
-    <td class="num">${fmtN(r.sl, r.dec)}</td>
-    <td class="num">${fmt(Math.round(r.donGia))}</td>
+    <td class="num">${r.sl == null ? '' : fmtN(r.sl, r.dec)}</td>
+    <td class="num">${r.sl == null ? '' : fmtN(r.sl, r.dec)}</td>
+    <td class="num">${r.sl == null ? '' : fmt(Math.round(r.donGia))}</td>
     <td class="num">${fmt(Math.round(r.tt))}</td>
     <td><input type="text" class="px-gc" value="${(r.ghiChu||'').replace(/"/g,'&quot;')}" placeholder="Ghi chú"></td>
   </tr>`).join('');
@@ -5122,15 +5112,57 @@ window.exportTonKhoExcel = async function(nam, thang) {
 // SECTION: SO NHAP XUAT (master ledger 1 ngày)
 // ============================================================
 let SONX_DATE = null;
+
+// Xuất khác (nhập tay) cho Sổ NX: DATA.xuatKhacSo[`${ngay}__${idKey}`] = SL
+function getXuatKhacSo(ngay, idKey) { return (DATA.xuatKhacSo && +DATA.xuatKhacSo[`${ngay}__${idKey}`]) || 0; }
+function setXuatKhacSo(ngay, idKey, sl) {
+  if (!DATA.xuatKhacSo) DATA.xuatKhacSo = {};
+  const k = `${ngay}__${idKey}`;
+  if (!sl) delete DATA.xuatKhacSo[k]; else DATA.xuatKhacSo[k] = +sl;
+  saveData();
+}
+
+// CSS riêng cho Sổ Nhập-Xuất (mẫu LTTP-CĐ) — chèn 1 lần
+function _ensureSoNxCss() {
+  if (document.getElementById('sonx-style')) return;
+  const s = document.createElement('style');
+  s.id = 'sonx-style';
+  s.textContent = `
+    .snx-scroll { overflow-x:auto; border:1px solid #94a3b8; border-radius:var(--radius-sm); background:#fff; }
+    .snx-table { border-collapse:collapse; font-size:12px; min-width:1180px; width:100%; }
+    .snx-table th, .snx-table td { border:1px solid #94a3b8; padding:3px 6px; }
+    .snx-table thead th { background:#f1f5f9; text-align:center; font-weight:700; vertical-align:middle; white-space:nowrap; }
+    .snx-table td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .snx-table td.ctr { text-align:center; white-space:nowrap; }
+    .snx-table td.name { text-align:left; white-space:nowrap; }
+    .snx-table tbody tr.tc td:not(.fin) { background:#fbfdff; }
+    .snx-table tbody td .neg { color:#dc2626; }
+    .snx-table tr.totrow td { font-weight:700; background:#eef2ff; text-align:right; white-space:nowrap; }
+    .snx-table tr.totrow td.totc { background:#eef2ff; }
+    /* Khối Công khai tài chính = các cột bên phải cùng bảng */
+    .snx-table td.fin { background:#fff; }
+    .snx-table td.fin.fl { text-align:left; white-space:nowrap; }
+    .snx-table td.fin.fh { background:#eef2ff; font-weight:700; text-align:center; }
+    .snx-table td.fin.b { font-weight:700; }
+    .snx-table td.fin.num.b { color:var(--c-primary); }
+    .snx-table input.snx-xk { width:62px; box-sizing:border-box; border:1px solid var(--c-border); border-radius:4px; padding:2px 4px; font-size:12px; text-align:right; font-family:inherit; }
+    .snx-table input.snx-xk:focus { outline:none; border-color:var(--c-primary); }
+    .snx-sign { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:24px; text-align:center; font-size:13px; }
+    .snx-sign .role { font-weight:700; text-transform:uppercase; }
+    .snx-sign .nm { margin-top:64px; font-weight:600; }
+  `;
+  document.head.appendChild(s);
+}
+
 function renderSoNX() {
-  setSubtitle('Sổ Nhập-Xuất tổng hợp 1 ngày — Tồn đầu + Nhập − Xuất = Tồn cuối. Cho mọi mặt hàng kg/L (TC + tươi).');
+  _ensureSoNxCss();
+  setSubtitle('Sổ theo dõi Nhập–Xuất LTTP–CĐ (1 ngày). Số Mua/TGSX nhập tay vào kho; tiêu chuẩn lấy từ Đi chợ.');
   const { thang, nam } = DATA.cauHinh.kyHienTai;
   const ngayMax = dim(thang, nam);
   if (!SONX_DATE) {
     SONX_DATE = `${nam}-${String(thang).padStart(2,'0')}-${String(Math.min(new Date().getDate(), ngayMax)).padStart(2,'0')}`;
   }
-  const [_,__,dStr] = SONX_DATE.split('-');
-  const d = Math.min(+dStr || 1, ngayMax);
+  const { y, m, d } = _ymdParse(SONX_DATE);
 
   setActions(`
     <label class="small text-muted" style="margin:0 6px 0 0">Ngày</label>
@@ -5138,58 +5170,212 @@ function renderSoNX() {
     <button class="btn-x btn-p" onclick="window.exportSoNxExcel('${SONX_DATE}')">⬇ Xuất Excel</button>
   `);
 
-  const allItems = DATA.matHang.filter(m => m.dvt !== '%');
-  // Precompute tồn đầu = cumsum đến d-1
-  const tonDauMap = {};
-  allItems.forEach(mh => {
-    let t = 0;
-    for (let dd = 1; dd < d; dd++) {
-      t += nhapKhoNgay(mh.id, dd) - xuatKhoNgay(mh.id, dd);
+  // Định dạng kiểu kế toán: số âm để trong ngoặc, số 0/null hiển thị '-'
+  const accSL = (n, dec) => { if (n == null) return '-'; const v = +n; if (!v) return '-'; const s = fmtN(Math.abs(v), dec); return v < 0 ? `<span class="neg">(${s})</span>` : s; };
+  const accTT = (n) => { if (n == null) return '-'; const v = Math.round(+n); if (!v) return '-'; const s = fmt(Math.abs(v)); return v < 0 ? `<span class="neg">(${s})</span>` : s; };
+
+  // Tồn kho TC kg/L (tồn đầu/nhập/xuất theo ngày)
+  const tonKho = buildTonKhoGrid(y, m);
+  const tonCell = {};
+  if (d >= 1 && d <= tonKho.grid.length) {
+    const gr = tonKho.grid[d - 1];
+    tonKho.items.forEach((mh, i) => { tonCell[mh.id] = gr.cells[i]; });
+  }
+  const tonIds = new Set(tonKho.items.map(x => x.id));
+
+  // Danh sách dòng = TC (luôn hiện) + tươi/% có trong Đi chợ ngày đó
+  const rows = buildPhieuRows(SONX_DATE);
+  let totTonDau = 0, totMuaTT = 0, totCongNhapTT = 0, totXuatTT = 0, totCongXuatTT = 0;
+
+  // ---- Dòng bên trái: sổ nhập-xuất (18 cột) ----
+  let totXkTT = 0;
+  const leftRows = rows.map((r, i) => {
+    const isTcTon = r.mh && tonIds.has(r.mh.id);   // TC kg/L có theo dõi tồn
+    const idKey = r.mh ? ('mh' + r.mh.id) : ('free-' + r.ten);
+    let gia, dec, tonDauSL, muaSL, tgsxSL, xuatSL, tonDauTT, muaTT, xuatTT;
+    if (r.is_tc) {
+      // TC (gồm cả % như dầu diezen, rửa bát, gia vị): NHẬP lấy từ "Nhập trong ngày"
+      // (Mua/TGSX/đơn giá), KHÔNG lấy từ Đi chợ.
+      const item = getPhieuNhapItem(SONX_DATE, r.mh.id);
+      gia = (item && item.donGia != null) ? +item.donGia : (+r.mh.gia || 0);
+      muaSL = item && item.soLuong != null ? +item.soLuong : 0;
+      tgsxSL = item && item.slTgsx != null ? +item.slTgsx : 0;
+      if (isTcTon) {                       // kg/L: có tồn kho, xuất = tiêu chuẩn (định lượng × QS)
+        const cell = tonCell[r.mh.id] || { ton_dau:0, xuat:0, dec_sl: r.decimal ?? 1 };
+        dec = cell.dec_sl ?? (r.decimal ?? 1);
+        tonDauSL = cell.ton_dau || 0;
+        xuatSL = cell.xuat || 0;
+        xuatTT = xuatSL * gia;
+      } else {                              // %: Xuất trong ngày → SL để trống, Thành tiền lấy từ Đi chợ
+        dec = r.decimal ?? 2;
+        tonDauSL = 0;
+        xuatSL = null;
+        xuatTT = r.tt_dicho || 0;
+      }
+      tonDauTT = tonDauSL * gia;
+      muaTT = muaSL * gia;
+    } else {
+      // Hàng tươi (ngoài tiêu chuẩn): lấy từ Đi chợ (nơi nhập tươi)
+      dec = r.decimal ?? 1;
+      gia = +r.gia_dicho || 0;
+      tonDauSL = 0; muaSL = r.sl_dicho || 0; tgsxSL = 0; xuatSL = r.sl_dicho || 0;
+      tonDauTT = 0; muaTT = r.tt_dicho || 0; xuatTT = r.tt_dicho || 0;
     }
-    tonDauMap[mh.id] = t;
+    // Xuất khác (nhập tay) — chỉ cho hàng có đơn giá (không phải %)
+    const xkSL = getXuatKhacSo(SONX_DATE, idKey);
+    const xkTT = gia != null ? xkSL * gia : 0;
+    const congNhapSL = muaSL + tgsxSL;
+    const congNhapTT = muaTT;                       // TGSX không quy tiền
+    const congXuatSL = (xuatSL || 0) + xkSL;
+    const congXuatTT = xuatTT + xkTT;
+    totTonDau += tonDauTT; totMuaTT += muaTT; totCongNhapTT += congNhapTT; totXuatTT += xuatTT; totXkTT += xkTT; totCongXuatTT += congXuatTT;
+
+    const xkCell = (gia != null)
+      ? `<td class="num"><input type="number" step=".001" class="snx-xk" data-key="${idKey}" value="${xkSL || ''}" placeholder="-"></td>`
+      : `<td class="num">-</td>`;
+    const html =
+      `<td class="ctr">${i + 1}</td>`
+      + `<td class="name">${r.ten}</td>`
+      + `<td class="ctr">${r.dvt_disp || ''}</td>`
+      + `<td class="num">${gia != null && gia ? fmt(Math.round(gia)) : '-'}</td>`
+      + `<td class="num">${accSL(tonDauSL, dec)}</td>`
+      + `<td class="num">${accTT(tonDauTT)}</td>`
+      + `<td class="num">${accSL(muaSL, dec)}</td>`
+      + `<td class="num">${accSL(tgsxSL, dec)}</td>`
+      + `<td class="num">${accTT(muaTT)}</td>`
+      + `<td class="num">-</td>`
+      + `<td class="num">${accSL(congNhapSL, dec)}</td>`
+      + `<td class="num">${accTT(congNhapTT)}</td>`
+      + `<td class="num">${xuatSL == null ? '' : accSL(xuatSL, dec)}</td>`
+      + `<td class="num">${accTT(xuatTT)}</td>`
+      + xkCell
+      + `<td class="num">${accTT(xkTT)}</td>`
+      + `<td class="num">${accSL(congXuatSL, dec)}</td>`
+      + `<td class="num">${accTT(congXuatTT)}</td>`;
+    return { html, tc: !!r.is_tc };
   });
 
-  // Lọc: hiển items có hoạt động trong ngày HOẶC tồn đầu ≠ 0 HOẶC TC
-  const lines = allItems.map(mh => {
-    const tonDau = tonDauMap[mh.id];
-    const nh = nhapKhoNgay(mh.id, d);
-    const xt = xuatKhoNgay(mh.id, d);
-    const ton = tonDau + nh - xt;
-    const active = nh > 0 || xt > 0 || tonDau !== 0 || mh.isTC;
-    return { mh, tonDau, nh, xt, ton, active };
-  }).filter(x => x.active);
+  // Dòng CỘNG (tổng các cột Thành tiền)
+  const congHtml =
+    `<td class="totc" colspan="5" style="text-align:center">CỘNG</td>`
+    + `<td class="totc num">${accTT(totTonDau)}</td>`
+    + `<td class="totc" colspan="2"></td>`
+    + `<td class="totc num">${accTT(totMuaTT)}</td>`
+    + `<td class="totc"></td>`
+    + `<td class="totc"></td>`
+    + `<td class="totc num">${accTT(totCongNhapTT)}</td>`
+    + `<td class="totc"></td>`
+    + `<td class="totc num">${accTT(totXuatTT)}</td>`
+    + `<td class="totc"></td>`
+    + `<td class="totc num">${accTT(totXkTT)}</td>`
+    + `<td class="totc"></td>`
+    + `<td class="totc num">${accTT(totXuatTT + totXkTT)}</td>`;
+  leftRows.push({ html: congHtml, tc:false, tot:true });
 
-  const rowsHtml = lines.map(({ mh, tonDau, nh, xt, ton }) => {
-    const dec = mh.decimal ?? 1;
-    return `<tr>
-      <td><strong>${mh.ten}</strong>${mh.isTC?' <span class="pill pill-i" style="font-size:9.5px;padding:0 5px">TC</span>':''}</td>
-      <td>${mh.dvt}</td>
-      <td class="num">${fmt(mh.gia)}</td>
-      <td class="num">${fmtN(tonDau, dec)}</td>
-      <td class="num">${nh > 0 ? fmtN(nh, dec) : '—'}</td>
-      <td class="num">${xt > 0 ? fmtN(xt, dec) : '—'}</td>
-      <td class="num" style="font-weight:600;${ton<0?'color:#dc2626':''}">${fmtN(ton, dec)}</td>
-      <td class="num">${fmt(Math.round(ton * mh.gia))}</td>
-    </tr>`;
-  }).join('');
+  // ===== Công khai tài chính (cột bên phải, cùng 1 bảng) =====
+  const kt = _ntnKetToan(SONX_DATE);
+  const tc1 = DATA.tieuChuan.find(x => x.id === 1) || { tienSang:0, tienTrua:0, tienChieu:0 };
+  const thuS = kt.qsS * (tc1.tienSang || 0), thuT = kt.qsT * (tc1.tienTrua || 0), thuC = kt.qsC * (tc1.tienChieu || 0);
+  const congThuBua = thuS + thuT + thuC;
+  const anThem = Math.round(kt.tongThu - congThuBua);
+  const canDoiHomTruoc = _ntnCanDoiLuyKe(y, m, d - 1);
+  const thuaHomTruoc = canDoiHomTruoc >= 0 ? canDoiHomTruoc : 0;
+  const thieuHomTruoc = canDoiHomTruoc < 0 ? -canDoiHomTruoc : 0;
+  const congThu = congThuBua + thuaHomTruoc + anThem;          // + bù giá gạo/truy lĩnh/thu khách (=0)
+  const tienDaSuDung = kt.tienTc + kt.daChiTp;
+  const congChi = tienDaSuDung + thieuHomTruoc;
+  const thuaTrongNgay = congThu - congChi;
+  const M = n => fmt(Math.round(n || 0));
 
-  const totalGT = lines.reduce((s, l) => s + l.ton * l.mh.gia, 0);
+  // 6 ô cho mỗi dòng tài chính
+  const fH = t => `<td class="fin fh" colspan="6">${t}</td>`;
+  const fPlain = t => `<td class="fin fl" colspan="6">${t}</td>`;
+  const fMuc = (label, qs, price, amount) => `<td class="fin fl">${label}</td><td class="fin num">${qs || 0}</td><td class="fin ctr">×</td><td class="fin num">${M(price)}</td><td class="fin ctr">=</td><td class="fin num">${M(amount)}</td>`;
+  const fSum = (label, amount, bold) => `<td class="fin fl${bold ? ' b' : ''}" colspan="4">${label}</td><td class="fin"></td><td class="fin num${bold ? ' b' : ''}">${amount == null ? '' : M(amount)}</td>`;
+  const finRows = [
+    fH('THU'),
+    fPlain('- Mức (TC1):'),
+    fMuc('+ Sáng:', kt.qsS, tc1.tienSang, thuS),
+    fMuc('+ Trưa:', kt.qsT, tc1.tienTrua, thuT),
+    fMuc('+ Chiều:', kt.qsC, tc1.tienChieu, thuC),
+    fSum('Cộng:', congThuBua),
+    fSum('Thừa hôm trước:', thuaHomTruoc),
+    fSum('Bù giá gạo:', 0),
+    fSum('Ăn thêm:', anThem),
+    fSum('Truy lĩnh:', 0),
+    fSum('Thu của khách:', 0),
+    fSum('Cộng thu:', congThu, true),
+    fH('CHI'),
+    fSum('- Tiền đã sử dụng:', tienDaSuDung),
+    fSum('- Thiếu hôm trước:', thieuHomTruoc),
+    fSum('Cộng chi:', congChi, true),
+    fH('SO SÁNH'),
+    fSum('- ' + (thuaTrongNgay >= 0 ? 'Thừa' : 'Thiếu') + ' trong ngày:', Math.abs(thuaTrongNgay), true),
+  ];
+
+  // Ghép trái + phải vào CÙNG 1 bảng
+  const emptyLeft = '<td></td>'.repeat(18);
+  const finEmpty = '<td class="fin" colspan="6"></td>';
+  const N = Math.max(leftRows.length, finRows.length);
+  let bodyHtml = '';
+  for (let i = 0; i < N; i++) {
+    const L = leftRows[i];
+    const left = L ? L.html : emptyLeft;
+    const cls = L && L.tot ? ' class="totrow"' : (L && L.tc ? ' class="tc"' : '');
+    const right = finRows[i] || finEmpty;
+    bodyHtml += `<tr${cls}>${left}${right}</tr>`;
+  }
+
+  const dv = DATA.cauHinh;
 
   document.getElementById('page-body').innerHTML = `
     <div class="banner banner-i">
       <span class="b-ico">ⓘ</span>
-      <div>Sổ NX ngày <strong>${ymdToDmy(SONX_DATE)}</strong>. Tồn đầu = tổng (Nhập − Xuất) tích luỹ từ ngày 01 → ${String(d-1).padStart(2,'0')}. Tồn cuối = Tồn đầu + Nhập − Xuất.</div>
+      <div>Sổ Nhập–Xuất ngày <strong>${ymdToDmy(SONX_DATE)}</strong>. Tồn đầu = luỹ kế (Nhập−Xuất) đến hết hôm trước. Nhập = Mua + TGSX (nhập tay). Xuất = tiêu chuẩn theo Đi chợ. TGSX không quy tiền.</div>
     </div>
-    <div class="card-x"><div class="card-x-body p-0">
-      <table class="t"><thead><tr>
-        <th>Mặt hàng</th><th>ĐVT</th><th class="num">Đơn giá</th>
-        <th class="num">Tồn đầu</th><th class="num">Nhập</th><th class="num">Xuất</th><th class="num">Tồn cuối</th><th class="num">GT tồn (đ)</th>
-      </tr></thead><tbody>${rowsHtml || '<tr><td colspan="8" class="empty-state">Không có hoạt động</td></tr>'}</tbody>
-      <tfoot><tr><td colspan="7"><strong>Tổng giá trị tồn</strong></td><td class="num"><strong>${fmt(Math.round(totalGT))}</strong></td></tr></tfoot>
+    <div class="snx-scroll">
+      <table class="snx-table">
+        <thead>
+          <tr>
+            <th rowspan="3">TT</th>
+            <th rowspan="3">Tên LTTP-CĐ</th>
+            <th rowspan="3">ĐVT</th>
+            <th rowspan="3">Đơn giá</th>
+            <th colspan="2" rowspan="2">Ngày trước<br>chuyển qua</th>
+            <th colspan="4">Nhập trong ngày</th>
+            <th colspan="2" rowspan="2">Cộng nhập</th>
+            <th colspan="2" rowspan="2">Xuất trong ngày</th>
+            <th colspan="2" rowspan="2">Xuất khác</th>
+            <th colspan="2" rowspan="2">Cộng xuất</th>
+            <th colspan="6" rowspan="3">Công khai tài chính<br>${ymdToDmy(SONX_DATE)}</th>
+          </tr>
+          <tr>
+            <th colspan="2">Số lượng</th>
+            <th colspan="2">Thành tiền</th>
+          </tr>
+          <tr>
+            <th>SL</th><th>Thành tiền</th>
+            <th>Mua TT</th><th>TG CB</th><th>Mua TT</th><th>TG CB</th>
+            <th>SL</th><th>Thành tiền</th>
+            <th>SL</th><th>Thành tiền</th>
+            <th>SL</th><th>Thành tiền</th>
+            <th>SL</th><th>Thành tiền</th>
+          </tr>
+        </thead>
+        <tbody>${bodyHtml}</tbody>
       </table>
-    </div></div>
+    </div>
+
+    <div class="snx-sign">
+      <div><div class="role">Quản lý đơn vị</div><div class="nm">${dv.quanLy || ''}</div></div>
+      <div><div class="role">Trực ban</div><div class="nm">${dv.trucBan || ''}</div></div>
+      <div><div class="role">Chỉ huy đơn vị</div><div class="nm">${dv.chiHuy || ''}</div></div>
+    </div>
   `;
   document.getElementById('sonx-date').onchange = e => { SONX_DATE = e.target.value; renderSoNX(); };
+  document.querySelectorAll('.snx-xk').forEach(inp => {
+    inp.onchange = e => { setXuatKhacSo(SONX_DATE, e.target.dataset.key, +e.target.value || 0); renderSoNX(); };
+  });
 }
 
 window.exportSoNxExcel = async function(ngayYmd) {
